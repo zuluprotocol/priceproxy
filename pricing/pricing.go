@@ -57,7 +57,7 @@ type engine struct {
 
 type fetchPriceFunc func(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, client *http.Client, req *http.Request) (PriceInfo, error)
 
-// NewEngine ...
+// NewEngine creates a new pricing engine
 func NewEngine() Engine {
 	e := engine{
 		prices:  make(map[config.PriceConfig]PriceInfo),
