@@ -1,6 +1,8 @@
 # Price Proxy
 
-`priceproxy` fetches prices periodically from sources as listed in its config file. It provides a simple REST API for fetching prices. This avoids hitting API limits on upstream price sources.
+`priceproxy` fetches prices periodically from sources as listed in its config file. It provides a simple REST API for fetching prices.
+
+Vega trading bots use the price proxy to place orders with real-world prices while avoiding hitting API rate limits on upstream price sources. The bots can then provide liquidity on Testnet, and help make the charts look realistic.
 
 ## Config
 
