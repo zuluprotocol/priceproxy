@@ -43,7 +43,8 @@ mocks:
 
 .PHONY: build
 build:
-	@go build $(GO_FLAGS) ./...
+	@mkdir -p build
+	@go build $(GO_FLAGS) -o build/priceproxy ./cmd/priceproxy
 
 .PHONY: install
 install:
@@ -52,18 +53,18 @@ install:
 .PHONY: release-linux
 release-linux:
 	@mkdir -p build
-	@env GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/priceproxy-linux-amd64 $(GO_FLAGS)
+	@env GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/priceproxy-linux-amd64 $(GO_FLAGS) ./cmd/priceproxy
 	@cd build && zip priceproxy-linux-amd64.zip priceproxy-linux-amd64
 
 .PHONY: release-macos
 release-macos:
 	@mkdir -p build
-	@env GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/priceproxy-darwin-amd64 $(GO_FLAGS)
+	@env GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/priceproxy-darwin-amd64 $(GO_FLAGS) ./cmd/priceproxy
 	@cd build && zip priceproxy-darwin-amd64.zip priceproxy-darwin-amd64
 
 .PHONY: release-windows
 release-windows:
-	@env GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/priceproxy-amd64.exe $(GO_FLAGS)
+	@env GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/priceproxy-amd64.exe $(GO_FLAGS) ./cmd/priceproxy
 	@cd build && 7z a -tzip priceproxy-windows-amd64.zip priceproxy-amd64.exe
 
 .PHONY: lint
