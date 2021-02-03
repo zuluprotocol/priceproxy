@@ -73,10 +73,11 @@ jobs:
     - name: Vet
       run: make vet
 
-    - name: Run Gosec Security Scanner
-      uses: securego/gosec@v2.6.1
-      with:
-        args: ./...
+    # Container action is only supported on Linux
+    # - name: Run Gosec Security Scanner
+    #   uses: securego/gosec@v2.6.1
+    #   with:
+    #     args: ./...
 
   build-windows:
     name: Windows Build
@@ -107,7 +108,8 @@ jobs:
     - name: Vet
       run: make vet
 
-    - name: Run Gosec Security Scanner
-      uses: securego/gosec@v2.6.1
-      with:
-        args: ./...
+    # Container action is only supported on Linux
+    # - name: Run Gosec Security Scanner
+    #   uses: securego/gosec@v2.6.1
+    #   with:
+    #     args: ./...
