@@ -9,6 +9,7 @@ on:
       - 'v*' # Push events to matching v*, e.g. v1.0, v20.15.10
 
 jobs:
+
   release-linux:
     name: Linux release
     runs-on: ubuntu-latest
@@ -23,11 +24,16 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Get dependencies
-      run: |
-        go get -t -d ./...
+      run: make deps
 
     - name: Tests
-      run: go test ./...
+      run: make test
+
+    - name: Lint
+      run: make lint
+
+    - name: Vet
+      run: make vet
 
     - name: Set release version
       id: vars
@@ -59,11 +65,16 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Get dependencies
-      run: |
-        go get -t -d ./...
+      run: make deps
 
     - name: Tests
-      run: go test ./...
+      run: make test
+
+    - name: Lint
+      run: make lint
+
+    - name: Vet
+      run: make vet
 
     - name: Set release version
       id: vars
@@ -95,11 +106,16 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Get dependencies
-      run: |
-        go get -t -d ./...
+      run: make deps
 
     - name: Tests
-      run: go test ./...
+      run: make test
+
+    - name: Lint
+      run: make lint
+
+    - name: Vet
+      run: make vet
 
     - name: Set release version
       id: vars

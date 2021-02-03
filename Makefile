@@ -17,8 +17,8 @@ endif
 
 GO_FLAGS := -ldflags "-X main.Version=$(VERSION) -X main.VersionHash=$(VERSION_HASH)"
 
-.PHONY: default
-default: deps install test lint
+.PHONY: all
+default: deps build test lint vet
 
 .PHONY: coverage
 coverage:
@@ -35,11 +35,15 @@ deps:
 
 .PHONY: gosec
 gosec:
-	gosec ./...
+	@gosec ./...
 
 .PHONY: mocks
 mocks:
 	@go generate ./...
+
+.PHONY: build
+build:
+	@go build $(GO_FLAGS) ./...
 
 .PHONY: install
 install:
