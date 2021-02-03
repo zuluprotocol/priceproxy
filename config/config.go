@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ServerConfig describes the settings for running the price proxy.
 type ServerConfig struct {
 	Env       string
 	Listen    string
@@ -18,6 +19,7 @@ type ServerConfig struct {
 	LogLevel  string
 }
 
+// PriceConfig describes one price setting, which uses one source.
 type PriceConfig struct {
 	Source string  `yaml:"source"`
 	Base   string  `yaml:"base"`
@@ -26,6 +28,8 @@ type PriceConfig struct {
 	Wander bool    `yaml:"wander"`
 }
 
+// SourceConfig describes one source setting (e.g. one API endpoint).
+// The URL has "{base}" and "{quote}" replaced at runtime with entries from PriceConfig.
 type SourceConfig struct {
 	Name        string  `yaml:"name"`
 	URL         url.URL `yaml:"url"`
@@ -33,6 +37,7 @@ type SourceConfig struct {
 	SleepWander int     `yaml:"sleepWander"`
 }
 
+// Config describes the top level config file format.
 type Config struct {
 	Server  *ServerConfig   `yaml:"server"`
 	Prices  []*PriceConfig  `yaml:"prices"`
@@ -40,22 +45,27 @@ type Config struct {
 }
 
 var (
-	ErrNil                  = errors.New("nil pointer")
-	ErrEmptyConfigSection   = errors.New("empty config file section")
-	ErrMissingConfigSection = errors.New("missing config file section")
-	ErrInvalidValue         = errors.New("invalid value")
+	// ErrNil indicates that a nil/null pointer was encountered
+	ErrNil = errors.New("nil pointer")
+
+	// ErrMissingEmptyConfigSection indicates that a required config file section is missing (not present) or empty (zero-length).
+	ErrMissingEmptyConfigSection = errors.New("config file section is missing/empty")
+
+	// ErrInvalidValue indicates that a value was invalid.
+	ErrInvalidValue = errors.New("invalid value")
 )
 
+// CheckConfig checks the config for valid structure and values.
 func CheckConfig(cfg *Config) error {
 	if cfg == nil {
 		return ErrNil
 	}
 
 	if cfg.Sources == nil {
-		return fmt.Errorf("%s: %s", ErrMissingConfigSection.Error(), "sources")
+		return fmt.Errorf("%s: %s", ErrMissingEmptyConfigSection.Error(), "sources")
 	}
 	if len(cfg.Sources) == 0 {
-		return fmt.Errorf("%s: %s", ErrEmptyConfigSection.Error(), "sources")
+		return fmt.Errorf("%s: %s", ErrMissingEmptyConfigSection.Error(), "sources")
 	}
 	for _, sourcecfg := range cfg.Sources {
 		if sourcecfg.SleepReal == 0 {
@@ -67,10 +77,10 @@ func CheckConfig(cfg *Config) error {
 	}
 
 	if cfg.Prices == nil {
-		return fmt.Errorf("%s: %s", ErrMissingConfigSection.Error(), "prices")
+		return fmt.Errorf("%s: %s", ErrMissingEmptyConfigSection.Error(), "prices")
 	}
 	if len(cfg.Prices) == 0 {
-		return fmt.Errorf("%s: %s", ErrEmptyConfigSection.Error(), "prices")
+		return fmt.Errorf("%s: %s", ErrMissingEmptyConfigSection.Error(), "prices")
 	}
 	for _, pricecfg := range cfg.Prices {
 		if pricecfg.Factor == 0 {
@@ -81,6 +91,7 @@ func CheckConfig(cfg *Config) error {
 	return nil
 }
 
+// ConfigureLogging configures logging.
 func ConfigureLogging(cfg *ServerConfig) error {
 	if cfg == nil {
 		return ErrNil

@@ -28,6 +28,9 @@ var (
 	ErrSourceAlreadyExists     = errors.New("source already exists")
 )
 
+// PriceInfo describes a price from a source.
+// The price may be a real updated from an upstream source, or one that has been wandered.
+// The LastUpdated timstamps indicate when the price was last fetched for real and when (if at all) it was last wandered.
 type PriceInfo struct {
 	Price             float64
 	LastUpdatedReal   time.Time
@@ -35,7 +38,7 @@ type PriceInfo struct {
 }
 
 // Engine is the source of price information from multiple external/internal/fake sources.
-//go:generate go run github.com/golang/mock/mockgen -destination mocks/engine_mock.go -package mocks code.vegaprotocol.io/traderbot/pricing Engine
+//go:generate go run github.com/golang/mock/mockgen -destination mocks/engine_mock.go -package mocks code.vegaprotocol.io/priceproxy/pricing Engine
 type Engine interface {
 	AddSource(sourcecfg config.SourceConfig) error
 	GetSource(name string) (config.SourceConfig, error)

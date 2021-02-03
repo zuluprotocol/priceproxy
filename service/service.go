@@ -69,8 +69,7 @@ func (s *Service) addRoutes() {
 }
 
 func (s *Service) getServer() *http.Server {
-	var handler http.Handler
-	handler = s // cors.AllowAll().Handler(s)
+	var handler http.Handler = s // cors.AllowAll().Handler(s)
 	return &http.Server{
 		Addr:           s.config.Server.Listen,
 		WriteTimeout:   time.Second * 15,
