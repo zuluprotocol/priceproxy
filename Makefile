@@ -70,7 +70,7 @@ release-windows:
 lint:
 	@go install golang.org/x/lint/golint
 	@outputfile="$$(mktemp)" ; \
-	go list ./... | xargs -r golint 2>&1 | \
+	go list ./... | xargs golint 2>&1 | \
 		sed -e "s#^$$GOPATH/src/##" | tee "$$outputfile" ; \
 	lines="$$(wc -l <"$$outputfile")" ; \
 	rm -f "$$outputfile" ; \
