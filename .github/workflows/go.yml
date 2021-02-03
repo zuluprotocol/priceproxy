@@ -1,0 +1,83 @@
+---
+
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+
+  build-linux:
+    name: Linux build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.14
+      id: go
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: |
+        make deps
+
+    - name: Build
+      run: go build ./...
+
+    - name: Tests
+      run: go test ./...
+
+  build-macos:
+    name: MacOS build
+    runs-on: macos-latest
+    steps:
+
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.14
+      id: go
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: |
+        go get -t -d ./...
+
+    - name: Build
+      run: go build ./...
+
+    - name: Tests
+      run: go test ./...
+
+  build-windows:
+    name: Windows Build
+    runs-on: windows-latest
+    steps:
+
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.14
+      id: go
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: |
+        go get -t -d ./...
+
+    - name: Build
+      run: go build ./...
+
+    - name: Tests
+      run: go test ./...

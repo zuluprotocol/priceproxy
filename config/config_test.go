@@ -16,11 +16,11 @@ func TestCheckConfig(t *testing.T) {
 
 	var cfg config.Config
 	err = config.CheckConfig(&cfg)
-	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingConfigSection.Error()))
+	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
 	cfg.Sources = []*config.SourceConfig{}
 	err = config.CheckConfig(&cfg)
-	assert.True(t, strings.HasPrefix(err.Error(), config.ErrEmptyConfigSection.Error()))
+	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
 	cfg.Sources = append(cfg.Sources, &config.SourceConfig{})
 	err = config.CheckConfig(&cfg)
@@ -32,11 +32,11 @@ func TestCheckConfig(t *testing.T) {
 
 	cfg.Sources[0].SleepWander = 1
 	err = config.CheckConfig(&cfg)
-	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingConfigSection.Error()))
+	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
 	cfg.Prices = []*config.PriceConfig{}
 	err = config.CheckConfig(&cfg)
-	assert.True(t, strings.HasPrefix(err.Error(), config.ErrEmptyConfigSection.Error()))
+	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
 	cfg.Prices = append(cfg.Prices, &config.PriceConfig{})
 	err = config.CheckConfig(&cfg)
