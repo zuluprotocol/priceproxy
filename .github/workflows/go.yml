@@ -13,12 +13,17 @@ jobs:
   build-linux:
     name: Linux build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.15', '1.14' ]
+    env:
+      GO_VER: ${{ matrix.go }}
     steps:
 
-    - name: Set up Go 1.14
+    - name: Set up Go ${{ matrix.go }}
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.14
+        go-version: ${{ matrix.go }}
       id: go
 
     - name: Check out code
@@ -43,16 +48,20 @@ jobs:
       uses: securego/gosec@v2.6.1
       with:
         args: ./...
+      if: env.GO_VER == '1.15'
 
   build-macos:
     name: MacOS build
     runs-on: macos-latest
+    strategy:
+      matrix:
+        go: [ '1.15', '1.14' ]
     steps:
 
-    - name: Set up Go 1.14
+    - name: Set up Go ${{ matrix.go }}
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.14
+        go-version: ${{ matrix.go }}
       id: go
 
     - name: Check out code
@@ -82,12 +91,15 @@ jobs:
   build-windows:
     name: Windows Build
     runs-on: windows-latest
+    strategy:
+      matrix:
+        go: [ '1.15', '1.14' ]
     steps:
 
-    - name: Set up Go 1.14
+    - name: Set up Go ${{ matrix.go }}
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.14
+        go-version: ${{ matrix.go }}
       id: go
 
     - name: Check out code
