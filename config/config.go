@@ -61,6 +61,9 @@ func CheckConfig(cfg *Config) error {
 		return ErrNil
 	}
 
+	if cfg.Server == nil {
+		return fmt.Errorf("%s: %s", ErrMissingEmptyConfigSection.Error(), "server")
+	}
 	if cfg.Sources == nil {
 		return fmt.Errorf("%s: %s", ErrMissingEmptyConfigSection.Error(), "sources")
 	}
