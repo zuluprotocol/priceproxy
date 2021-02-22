@@ -18,6 +18,10 @@ func TestCheckConfig(t *testing.T) {
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
+	cfg.Server = &config.ServerConfig{}
+	err = config.CheckConfig(&cfg)
+	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
+
 	cfg.Sources = []*config.SourceConfig{}
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
