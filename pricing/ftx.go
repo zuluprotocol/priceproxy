@@ -6,6 +6,7 @@ package pricing
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -50,14 +51,21 @@ func getPriceFTX(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, cli
 		return
 	}
 	defer resp.Body.Close()
+
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		err = ErrServerResponseReadFail
+		return
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("ftx.com returned HTTP %d", resp.StatusCode)
+		err = fmt.Errorf("ftx.com returned HTTP %d (%s)", resp.StatusCode, string(content))
 		return
 	}
 
 	var response ftxResponse
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
+	// if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {...}
+	if err = json.Unmarshal(content, &response); err != nil {
 		return
 	}
 	if !response.Success {
@@ -66,19 +74,19 @@ func getPriceFTX(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, cli
 	}
 
 	priceinfo.Price = response.Result.Price
-	if priceinfo.Price == 0 {
+	if priceinfo.Price <= 0.0 {
 		// Sometimes null/zero.
 		priceinfo.Price = response.Result.Last
 	}
 
-	if priceinfo.Price == 0 {
-		err = fmt.Errorf("ftx.com returned zero for Price and Last")
+	if priceinfo.Price <= 0.0 {
+		err = fmt.Errorf("ftx.com returned zero/negative for Price and Last")
 		return
 	}
 
-	priceinfo.Price *= pricecfg.Factor
 	t := time.Now().Round(0)
 	priceinfo.LastUpdatedReal = t
 	priceinfo.LastUpdatedWander = t
+	priceinfo.Price *= pricecfg.Factor
 	return
 }

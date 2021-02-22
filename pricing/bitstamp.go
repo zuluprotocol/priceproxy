@@ -34,14 +34,14 @@ func getPriceBitStamp(pricecfg config.PriceConfig, sourcecfg config.SourceConfig
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("bitstamp returned HTTP %d", resp.StatusCode)
-		return
-	}
-
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		err = ErrServerResponseReadFail
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("bitstamp returned HTTP %d (%s)", resp.StatusCode, string(content))
 		return
 	}
 
@@ -55,10 +55,18 @@ func getPriceBitStamp(pricecfg config.PriceConfig, sourcecfg config.SourceConfig
 		return
 	}
 
+	var p float64
+	p, err = strconv.ParseFloat(response.Last, 64)
+	if err != nil {
+		return
+	}
+	if p <= 0.0 {
+		err = fmt.Errorf("bitstamp returned zero/negative price: %f", p)
+		return
+	}
 	t := time.Now().Round(0)
 	priceinfo.LastUpdatedReal = t
 	priceinfo.LastUpdatedWander = t
-	priceinfo.Price, err = strconv.ParseFloat(response.Last, 64)
-	priceinfo.Price *= pricecfg.Factor
+	priceinfo.Price = p * pricecfg.Factor
 	return
 }
