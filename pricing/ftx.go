@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"code.vegaprotocol.io/priceproxy/config"
+	"github.com/pkg/errors"
 )
 
 type ftxResultResponse struct {
@@ -54,7 +55,7 @@ func getPriceFTX(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, cli
 
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		err = ErrServerResponseReadFail
+		err = errors.Wrap(err, "failed to read HTTP response body")
 		return
 	}
 
@@ -66,6 +67,7 @@ func getPriceFTX(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, cli
 	var response ftxResponse
 	// if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {...}
 	if err = json.Unmarshal(content, &response); err != nil {
+		err = errors.Wrap(err, "failed to parse HTTP response as JSON")
 		return
 	}
 	if !response.Success {

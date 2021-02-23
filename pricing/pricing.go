@@ -1,7 +1,6 @@
 package pricing
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -16,17 +15,6 @@ import (
 )
 
 const minPrice = 0.00001
-
-// Errors
-var (
-	ErrServerResponseReadFail  = errors.New("failed to read response from server")
-	ErrNoPriceForPair          = errors.New("no price for currency pair")
-	ErrNoSourceForPair         = errors.New("no source for currency pair")
-	ErrBadHTTPResponseCode     = errors.New("bad HTTP response code")
-	ErrPriceNotFoundInResponse = errors.New("price not found in response")
-	ErrPriceAlreadyExists      = errors.New("price already exists")
-	ErrSourceAlreadyExists     = errors.New("source already exists")
-)
 
 // PriceInfo describes a price from a source.
 // The price may be a real updated from an upstream source, or one that has been wandered.
@@ -82,7 +70,7 @@ func (e *engine) AddSource(sourcecfg config.SourceConfig) error {
 
 	_, found := e.sources[sourcecfg.Name]
 	if found {
-		return fmt.Errorf("%s: %s", ErrSourceAlreadyExists.Error(), sourcecfg.Name)
+		return fmt.Errorf("source already exists: %s", sourcecfg.Name)
 	}
 
 	e.sources[sourcecfg.Name] = sourcecfg
@@ -119,7 +107,7 @@ func (e *engine) AddPrice(pricecfg config.PriceConfig) (pi PriceInfo, err error)
 	_, found := e.prices[pricecfg]
 	e.pricesMu.Unlock()
 	if found {
-		err = fmt.Errorf("%s: %s", ErrPriceAlreadyExists.Error(), pricecfg.String())
+		err = fmt.Errorf("price already exists: %s", pricecfg.String())
 		return
 	}
 
@@ -190,20 +178,6 @@ func (e *engine) UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo) {
 }
 
 func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, u *url.URL, headers map[string][]string, fetchPrice fetchPriceFunc) {
-	annualisedSleepReal := float64(sourcecfg.SleepReal) / 365.25 / 86400.0
-	kappa := 1.0 / annualisedSleepReal
-
-	client := http.Client{}
-	if u == nil {
-		u = urlWithBaseQuote(sourcecfg.URL, pricecfg)
-	}
-	req, _ := http.NewRequest(http.MethodGet, u.String(), nil)
-	for headerName, headerValueList := range headers {
-		for _, headerValue := range headerValueList {
-			req.Header.Add(headerName, headerValue)
-		}
-	}
-
 	sublog := log.WithFields(log.Fields{
 		"base":       pricecfg.Base,
 		"quote":      pricecfg.Quote,
@@ -211,8 +185,26 @@ func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConf
 		"source-url": u.String(),
 	})
 
+	annualisedSleepReal := float64(sourcecfg.SleepReal) / 365.25 / 86400.0
+	kappa := 1.0 / annualisedSleepReal
+
+	client := http.Client{}
+	if u == nil {
+		u = urlWithBaseQuote(sourcecfg.URL, pricecfg)
+	}
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		sublog.WithFields(log.Fields{
+			"error": err.Error()},
+		).Fatal("Failed to create HTTP request")
+	}
+	for headerName, headerValueList := range headers {
+		for _, headerValue := range headerValueList {
+			req.Header.Add(headerName, headerValue)
+		}
+	}
+
 	var rpi, realPriceInfo, priceInfo PriceInfo
-	var err error
 
 	// Get price for the first time
 	for err != nil || realPriceInfo.Price == 0 {
@@ -247,22 +239,28 @@ func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConf
 		}
 
 		if pricecfg.Wander {
-			priceInfo, _ = e.GetPrice(pricecfg)
-			// make the price wander
-			sigma := 1.0
-			wander := kappa*(realPriceInfo.Price-priceInfo.Price)*annualisedSleepReal + sigma*priceInfo.Price*math.Sqrt(annualisedSleepReal)*rand.NormFloat64()
-			priceInfo.Price += wander
-			if priceInfo.Price < minPrice {
-				priceInfo.Price = minPrice
+			priceInfo, err = e.GetPrice(pricecfg)
+			if err == nil {
+				// make the price wander
+				sigma := 1.0
+				wander := kappa*(realPriceInfo.Price-priceInfo.Price)*annualisedSleepReal + sigma*priceInfo.Price*math.Sqrt(annualisedSleepReal)*rand.NormFloat64()
+				priceInfo.Price += wander
+				if priceInfo.Price < minPrice {
+					priceInfo.Price = minPrice
+				}
+				priceInfo.LastUpdatedWander = time.Now().Round(0)
+				e.UpdatePrice(pricecfg, priceInfo)
+				sublog.WithFields(log.Fields{
+					"kappa":    kappa,
+					"sigma":    sigma,
+					"wander":   wander,
+					"newPrice": priceInfo.String(),
+				}).Debug("Wandered price")
+			} else {
+				sublog.WithFields(log.Fields{
+					"error": err.Error(),
+				}).Warning("Failed to fetch price")
 			}
-			priceInfo.LastUpdatedWander = time.Now().Round(0)
-			e.UpdatePrice(pricecfg, priceInfo)
-			sublog.WithFields(log.Fields{
-				"kappa":    kappa,
-				"sigma":    sigma,
-				"wander":   wander,
-				"newPrice": priceInfo.String(),
-			}).Debug("Wandered price")
 		}
 		time.Sleep(time.Duration(sourcecfg.SleepWander) * time.Second)
 	}

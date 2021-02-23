@@ -156,6 +156,12 @@ func (s *Service) PricesGet(w http.ResponseWriter, r *http.Request, ps httproute
 	quote := r.URL.Query().Get("quote")
 	var wanderPtr *bool
 	wanderString := r.URL.Query().Get("wander")
+	log.WithFields(log.Fields{
+		"base":   base,
+		"quote":  quote,
+		"source": source,
+		"wander": wanderString,
+	}).Info("GET /prices")
 	if wanderString != "" {
 		wander, err := strconv.ParseBool(wanderString)
 		if err != nil {

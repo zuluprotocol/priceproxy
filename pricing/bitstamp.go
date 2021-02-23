@@ -2,7 +2,6 @@ package pricing
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"code.vegaprotocol.io/priceproxy/config"
+	"github.com/pkg/errors"
 )
 
 type bitstampResponse struct {
@@ -30,13 +30,14 @@ func getPriceBitStamp(pricecfg config.PriceConfig, sourcecfg config.SourceConfig
 	var resp *http.Response
 	resp, err = client.Do(req)
 	if err != nil {
+		err = errors.Wrap(err, "failed to perform HTTP request")
 		return
 	}
 	defer resp.Body.Close()
 
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		err = ErrServerResponseReadFail
+		err = errors.Wrap(err, "failed to read HTTP response body")
 		return
 	}
 
@@ -47,6 +48,7 @@ func getPriceBitStamp(pricecfg config.PriceConfig, sourcecfg config.SourceConfig
 
 	var response bitstampResponse
 	if err = json.Unmarshal(content, &response); err != nil {
+		err = errors.Wrap(err, "failed to parse HTTP response as JSON")
 		return
 	}
 
