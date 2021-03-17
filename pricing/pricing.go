@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"code.vegaprotocol.io/priceproxy/config"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -120,6 +121,13 @@ func (e *engine) AddPrice(pricecfg config.PriceConfig) (pi PriceInfo, err error)
 
 	if source.Name == "bitstamp" {
 		go e.stream(pricecfg, source, nil, headers, getPriceBitStamp)
+	} else if source.Name == "coinmarketcap" {
+		headers, err = headersCoinmarketcap()
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("failed to create HTTP headers for %s", source.Name))
+			return
+		}
+		go e.stream(pricecfg, source, nil, headers, getPriceCoinmarketcap)
 	} else if strings.HasPrefix(source.Name, "ftx-") {
 		go e.stream(pricecfg, source, nil, headers, getPriceFTX)
 	} else {
@@ -178,6 +186,9 @@ func (e *engine) UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo) {
 }
 
 func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, u *url.URL, headers map[string][]string, fetchPrice fetchPriceFunc) {
+	if u == nil {
+		u = urlWithBaseQuote(sourcecfg.URL, pricecfg)
+	}
 	sublog := log.WithFields(log.Fields{
 		"base":       pricecfg.Base,
 		"quote":      pricecfg.Quote,
@@ -189,9 +200,6 @@ func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConf
 	kappa := 1.0 / annualisedSleepReal
 
 	client := http.Client{}
-	if u == nil {
-		u = urlWithBaseQuote(sourcecfg.URL, pricecfg)
-	}
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		sublog.WithFields(log.Fields{
