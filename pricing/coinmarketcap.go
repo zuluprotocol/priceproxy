@@ -42,8 +42,8 @@ type cmcDataResponse struct {
 }
 
 type cmcResponse struct {
-	Status cmcStatusResponse `json:"status"`
-	Data   map[string]cmcDataResponse
+	Status cmcStatusResponse          `json:"status"`
+	Data   map[string]cmcDataResponse `json:"data"`
 }
 
 func headersCoinmarketcap() (map[string][]string, error) {
