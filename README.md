@@ -71,6 +71,7 @@ prices:
 The following price sources are currently supported. Pull requests are gratefully received for more sources.
 
 - [Bitstamp](https://www.bitstamp.net/), [API docs](https://www.bitstamp.net/api/), see `pricing/bitstamp.go`
+- [Coin Market Cap](https://coinmarketcap.com/), [API docs](https://coinmarketcap.com/api/documentation/v1/), see `pricing/coinmarketcap.go`
 - [FTX](https://ftx.com/), [REST API docs](https://docs.ftx.com/#rest-api), see `pricing/ftx.go`
 
 ## priceproxy API Endpoints
