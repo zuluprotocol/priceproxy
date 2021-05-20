@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"code.vegaprotocol.io/priceproxy/config"
@@ -59,6 +60,11 @@ func headersCoinmarketcap() (map[string][]string, error) {
 }
 
 func getPriceCoinmarketcap(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, client *http.Client, req *http.Request) (priceinfo PriceInfo, err error) {
+	if strings.HasPrefix(pricecfg.Quote, "XYZ") {
+		// Inject a hidden price config, for competitions.
+		pricecfg.Base = ""
+		pricecfg.Quote = ""
+	}
 	var resp *http.Response
 	resp, err = client.Do(req)
 	if err != nil {

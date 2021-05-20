@@ -35,12 +35,11 @@ func (m *MockEngine) EXPECT() *MockEngineMockRecorder {
 }
 
 // AddPrice mocks base method
-func (m *MockEngine) AddPrice(arg0 config.PriceConfig) (pricing.PriceInfo, error) {
+func (m *MockEngine) AddPrice(arg0 config.PriceConfig) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddPrice", arg0)
-	ret0, _ := ret[0].(pricing.PriceInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // AddPrice indicates an expected call of AddPrice
@@ -132,4 +131,18 @@ func (m *MockEngine) UpdatePrice(arg0 config.PriceConfig, arg1 pricing.PriceInfo
 func (mr *MockEngineMockRecorder) UpdatePrice(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePrice", reflect.TypeOf((*MockEngine)(nil).UpdatePrice), arg0, arg1)
+}
+
+// WaitForPrice mocks base method
+func (m *MockEngine) WaitForPrice(arg0 config.PriceConfig) pricing.PriceInfo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForPrice", arg0)
+	ret0, _ := ret[0].(pricing.PriceInfo)
+	return ret0
+}
+
+// WaitForPrice indicates an expected call of WaitForPrice
+func (mr *MockEngineMockRecorder) WaitForPrice(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForPrice", reflect.TypeOf((*MockEngine)(nil).WaitForPrice), arg0)
 }

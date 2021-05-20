@@ -46,6 +46,11 @@ build:
 	@mkdir -p build
 	@go build $(GO_FLAGS) -o build/priceproxy ./cmd/priceproxy
 
+.PHONY: build-static
+build-static:
+	@mkdir -p build
+	@env CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/priceproxy-static ./cmd/priceproxy
+
 .PHONY: install
 install:
 	@go install $(GO_FLAGS) ./cmd/priceproxy
