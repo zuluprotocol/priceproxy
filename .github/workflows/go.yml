@@ -17,8 +17,6 @@ jobs:
       matrix:
         go: ['1.16', '1.15']
         os: [macos-latest, windows-latest, ubuntu-latest]
-    env:
-      GO_VER: ${{ matrix.go }}
     steps:
 
       - name: Set up Go ${{ matrix.go }}
@@ -40,7 +38,11 @@ jobs:
         run: make test
 
       - name: Lint
-        run: make lint
+        run: |
+          if ! command -v golint 1>/dev/null ; then
+            go get golang.org/x/lint/golint@latest || exit 1
+          fi
+          make lint
 
       - name: Vet
         run: make vet

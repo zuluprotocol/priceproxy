@@ -34,7 +34,11 @@ jobs:
         run: make test
 
       - name: Lint
-        run: make lint
+        run: |
+          if ! command -v golint 1>/dev/null ; then
+            go get golang.org/x/lint/golint@latest || exit 1
+          fi
+          make lint
 
       - name: Vet
         run: make vet
