@@ -127,7 +127,7 @@ func (s *Service) initPricingEngine() error {
 	}
 
 	for _, pricecfg := range s.config.Prices {
-		pi, err := s.pe.AddPrice(*pricecfg)
+		err := s.pe.AddPrice(*pricecfg)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":  err.Error(),
@@ -142,8 +142,14 @@ func (s *Service) initPricingEngine() error {
 			"base":   pricecfg.Base,
 			"quote":  pricecfg.Quote,
 			"wander": pricecfg.Wander,
-			"price":  pi.Price,
 		}).Info("Added price")
+	}
+
+	for _, pricecfg := range s.config.Prices {
+		pi := s.pe.WaitForPrice(*pricecfg)
+		log.WithFields(log.Fields{
+			"price": pi.Price,
+		}).Info("Got first price")
 	}
 
 	return nil
@@ -161,7 +167,7 @@ func (s *Service) PricesGet(w http.ResponseWriter, r *http.Request, ps httproute
 		"quote":  quote,
 		"source": source,
 		"wander": wanderString,
-	}).Info("GET /prices")
+	}).Debug("GET /prices")
 	if wanderString != "" {
 		wander, err := strconv.ParseBool(wanderString)
 		if err != nil {

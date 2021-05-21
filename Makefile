@@ -46,24 +46,29 @@ build:
 	@mkdir -p build
 	@go build $(GO_FLAGS) -o build/priceproxy ./cmd/priceproxy
 
+.PHONY: build-static
+build-static:
+	@mkdir -p build
+	@env CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/priceproxy-static ./cmd/priceproxy
+
 .PHONY: install
 install:
 	@go install $(GO_FLAGS) ./cmd/priceproxy
 
-.PHONY: release-linux
-release-linux:
+.PHONY: release-ubuntu-latest
+release-ubuntu-latest:
 	@mkdir -p build
 	@env GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/priceproxy-linux-amd64 $(GO_FLAGS) ./cmd/priceproxy
 	@cd build && zip priceproxy-linux-amd64.zip priceproxy-linux-amd64
 
-.PHONY: release-macos
-release-macos:
+.PHONY: release-macos-latest
+release-macos-latest:
 	@mkdir -p build
 	@env GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/priceproxy-darwin-amd64 $(GO_FLAGS) ./cmd/priceproxy
 	@cd build && zip priceproxy-darwin-amd64.zip priceproxy-darwin-amd64
 
-.PHONY: release-windows
-release-windows:
+.PHONY: release-windows-latest
+release-windows-latest:
 	@env GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/priceproxy-amd64.exe $(GO_FLAGS) ./cmd/priceproxy
 	@cd build && 7z a -tzip priceproxy-windows-amd64.zip priceproxy-amd64.exe
 

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"code.vegaprotocol.io/priceproxy/config"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,7 +32,8 @@ type Engine interface {
 	GetSource(name string) (config.SourceConfig, error)
 	GetSources() ([]config.SourceConfig, error)
 
-	AddPrice(pricecfg config.PriceConfig) (pi PriceInfo, err error)
+	AddPrice(pricecfg config.PriceConfig) error
+	WaitForPrice(pricecfg config.PriceConfig) PriceInfo
 	GetPrice(pricecfg config.PriceConfig) (PriceInfo, error)
 	GetPrices() map[config.PriceConfig]PriceInfo
 	UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo)
@@ -103,18 +103,17 @@ func (e *engine) GetSources() ([]config.SourceConfig, error) {
 	return response, nil
 }
 
-func (e *engine) AddPrice(pricecfg config.PriceConfig) (pi PriceInfo, err error) {
+func (e *engine) AddPrice(pricecfg config.PriceConfig) error {
 	e.pricesMu.Lock()
 	_, found := e.prices[pricecfg]
 	e.pricesMu.Unlock()
 	if found {
-		err = fmt.Errorf("price already exists: %s", pricecfg.String())
-		return
+		return fmt.Errorf("price already exists: %s", pricecfg.String())
 	}
 
 	source, err := e.GetSource(pricecfg.Source)
 	if err != nil {
-		return
+		return fmt.Errorf("failed to get price source for %s: %w", pricecfg.Source, err)
 	}
 
 	headers := map[string][]string{}
@@ -124,17 +123,18 @@ func (e *engine) AddPrice(pricecfg config.PriceConfig) (pi PriceInfo, err error)
 	} else if source.Name == "coinmarketcap" {
 		headers, err = headersCoinmarketcap()
 		if err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("failed to create HTTP headers for %s", source.Name))
-			return
+			return fmt.Errorf("failed to create HTTP headers for %s: %w", source.Name, err)
 		}
 		go e.stream(pricecfg, source, nil, headers, getPriceCoinmarketcap)
 	} else if strings.HasPrefix(source.Name, "ftx-") {
 		go e.stream(pricecfg, source, nil, headers, getPriceFTX)
 	} else {
-		err = fmt.Errorf("no source for %s", source.Name)
-		return
+		return fmt.Errorf("no source for %s", source.Name)
 	}
+	return nil
+}
 
+func (e *engine) WaitForPrice(pricecfg config.PriceConfig) PriceInfo {
 	sublog := log.WithFields(log.Fields{
 		"priceConfig": pricecfg.String(),
 	})
@@ -142,19 +142,18 @@ func (e *engine) AddPrice(pricecfg config.PriceConfig) (pi PriceInfo, err error)
 	sublog.Debug("Waiting for first price")
 	s := 10 // milliseconds
 	for {
-		pi, err = e.GetPrice(pricecfg)
+		pi, err := e.GetPrice(pricecfg)
 		if err != nil {
 			sublog.WithFields(log.Fields{"err": err.Error()}).Debug("Waiting for first price")
 		} else {
 			sublog.WithFields(log.Fields{"price": pi.Price}).Debug("Got first price")
 			if pi.Price > 0.0 {
-				break
+				return pi
 			}
 		}
 		time.Sleep(time.Duration(s) * time.Millisecond)
 		s *= 2
 	}
-	return
 }
 
 func (e *engine) GetPrice(pricecfg config.PriceConfig) (PriceInfo, error) {
@@ -187,7 +186,17 @@ func (e *engine) UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo) {
 
 func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, u *url.URL, headers map[string][]string, fetchPrice fetchPriceFunc) {
 	if u == nil {
-		u = urlWithBaseQuote(sourcecfg.URL, pricecfg)
+		p2 := config.PriceConfig{
+			Base:   pricecfg.Base,
+			Quote:  pricecfg.Quote,
+			Wander: pricecfg.Wander,
+		}
+		if strings.HasPrefix(p2.Quote, "XYZ") {
+			// Inject a hidden price config, for competitions.
+			p2.Base = ""
+			p2.Quote = ""
+		}
+		u = urlWithBaseQuote(sourcecfg.URL, p2)
 	}
 	sublog := log.WithFields(log.Fields{
 		"base":       pricecfg.Base,
