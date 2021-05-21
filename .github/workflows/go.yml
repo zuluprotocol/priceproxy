@@ -54,4 +54,4 @@ jobs:
           GOTOOLDIR: /usr/local/go/pkg/tool/linux_amd64
         with:
           args: ./...
-        if: ${{ matrix.go == "1.16" && matrix.os == "ubuntu-latest" }}
+        if: matrix.go == "1.16" && matrix.os == "ubuntu-latest"
