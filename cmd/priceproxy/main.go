@@ -77,7 +77,7 @@ func main() {
 
 	go func() {
 		err := s.Start()
-		if err != nil && err.Error() != "http: Server closed" {
+		if err != nil {
 			log.WithFields(log.Fields{
 				"listen": cfg.Server.Listen,
 				"extra":  err.Error(),
