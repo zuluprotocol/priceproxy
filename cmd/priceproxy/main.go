@@ -19,10 +19,10 @@ import (
 )
 
 var (
-	// Version is set at build time using: -ldflags "-X main.Version=someversion"
+	// Version is set at build time using: -ldflags "-X main.Version=someversion".
 	Version = "no_version_set"
 
-	// VersionHash is set at build time using: -ldflags "-X main.VersionHash=somehash"
+	// VersionHash is set at build time using: -ldflags "-X main.VersionHash=somehash".
 	VersionHash = "no_hash_set"
 )
 

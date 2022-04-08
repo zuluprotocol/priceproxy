@@ -45,7 +45,7 @@ type Config struct {
 }
 
 var (
-	// ErrNil indicates that a nil/null pointer was encountered
+	// ErrNil indicates that a nil/null pointer was encountered.
 	ErrNil = errors.New("nil pointer")
 
 	// ErrMissingEmptyConfigSection indicates that a required config file section is missing (not present) or empty (zero-length).

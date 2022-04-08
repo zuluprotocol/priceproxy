@@ -185,7 +185,6 @@ func (s *Service) PricesGet(w http.ResponseWriter, r *http.Request, ps httproute
 			(base == "" || base == k.Base) &&
 			(quote == "" || quote == k.Quote) &&
 			(wanderPtr == nil || *wanderPtr == k.Wander) {
-
 			response.Prices = append(response.Prices, &PriceResponse{
 				Source:            k.Source,
 				Base:              k.Base,

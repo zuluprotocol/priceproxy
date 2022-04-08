@@ -49,7 +49,7 @@ type engine struct {
 
 type fetchPriceFunc func(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, client *http.Client, req *http.Request) (PriceInfo, error)
 
-// NewEngine creates a new pricing engine
+// NewEngine creates a new pricing engine.
 func NewEngine() Engine {
 	e := engine{
 		prices:  make(map[config.PriceConfig]PriceInfo),
@@ -212,7 +212,8 @@ func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConf
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		sublog.WithFields(log.Fields{
-			"error": err.Error()},
+			"error": err.Error(),
+		},
 		).Fatal("Failed to create HTTP request")
 	}
 	for headerName, headerValueList := range headers {
