@@ -1,6 +1,7 @@
 package pricing
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/rand"
@@ -209,7 +210,7 @@ func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConf
 	kappa := 1.0 / annualisedSleepReal
 
 	client := http.Client{}
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
 	if err != nil {
 		sublog.WithFields(log.Fields{
 			"error": err.Error(),
