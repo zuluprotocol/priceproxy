@@ -69,40 +69,40 @@ func getPriceCoinmarketcap(pricecfg config.PriceConfig, sourcecfg config.SourceC
 	resp, err = client.Do(req)
 	if err != nil {
 		err = errors.Wrap(err, "failed to perform HTTP request")
-		return
+		return priceinfo, err
 	}
 	defer resp.Body.Close()
 
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		err = errors.Wrap(err, "failed to read HTTP response body")
-		return
+		return priceinfo, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("got HTTP %d (%s)", resp.StatusCode, string(content))
-		return
+		return priceinfo, err
 	}
 
 	var response cmcResponse
 	if err = json.Unmarshal(content, &response); err != nil {
 		err = errors.Wrap(err, "failed to parse HTTP response as JSON")
-		return
+		return priceinfo, err
 	}
 
 	data, ok := response.Data[pricecfg.Base]
 	if !ok {
 		err = fmt.Errorf("failed to find Base in response: %s", pricecfg.Base)
-		return
+		return priceinfo, err
 	}
 	quote, ok := data.Quote[pricecfg.Quote]
 	if !ok {
 		err = fmt.Errorf("failed to find Quote in response: %s", pricecfg.Quote)
-		return
+		return priceinfo, err
 	}
 	t := time.Now().Round(0)
 	priceinfo.LastUpdatedReal = t
 	priceinfo.LastUpdatedWander = t
 	priceinfo.Price = quote.Price * pricecfg.Factor
-	return
+	return priceinfo, nil
 }
