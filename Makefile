@@ -59,8 +59,7 @@ release-windows-latest:
 
 .PHONY: build
 build: ## install the binary in GOPATH/bin
-	@if [ ! -d bin ]; then mkdir bin && echo "${REPO_NAME}" > bin/.gitignore; fi
-	@go build -v -o bin/${REPO_NAME} ./cmd/${REPO_NAME}
+	@env GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bin/${REPO_NAME} ./cmd/${REPO_NAME}
 
 .PHONY: lint
 lint:
