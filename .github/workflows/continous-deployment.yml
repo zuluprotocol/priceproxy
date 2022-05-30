@@ -1,0 +1,23 @@
+name: "Continous Deployment Workflow"
+"on":
+  release:
+    types: [published]
+jobs:
+  update-manifest-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.VEGA_CI_SSH_KEY }}
+      - run: |
+          version=$(git describe --tags --abbrev=0)
+          git config --global user.name 'vega-ci-bot'
+          git config --global user.email 'dev@vega.xyz'
+          git clone git@github.com:vegaprotocol/k8s.git
+          cd k8s
+                    echo -n "$version" > charts/apps/priceproxy/devnet/VERSION
+                    git commit -am "Automated version update for priceproxy: $version"
+          git push
