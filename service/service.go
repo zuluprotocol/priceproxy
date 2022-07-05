@@ -45,8 +45,8 @@ type PricesResponse struct {
 }
 
 // NewService creates a new service instance (with optional mocks for test purposes).
-func NewService(config config.Config) (s *Service, err error) {
-	s = &Service{
+func NewService(config config.Config) (*Service, error) {
+	s := &Service{
 		Router: httprouter.New(),
 		config: config,
 	}
@@ -58,7 +58,7 @@ func NewService(config config.Config) (s *Service, err error) {
 	s.addRoutes()
 	s.server = s.getServer()
 
-	return
+	return s, nil
 }
 
 func (s *Service) addRoutes() {

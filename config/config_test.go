@@ -18,7 +18,12 @@ func TestCheckConfig(t *testing.T) {
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
-	cfg.Server = &config.ServerConfig{}
+	cfg.Server = &config.ServerConfig{
+		Env:       "prod",
+		Listen:    ":80",
+		LogFormat: "json",
+		LogLevel:  "debug",
+	}
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 

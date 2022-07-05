@@ -1,23 +1,11 @@
 # Makefile
-export GO111MODULE := on
 export REPO_NAME := priceproxy
 
-ifeq ($(CI),)
-	# Not in CI
-	VERSION := dev-$(USER)
-	VERSION_HASH := $(shell git rev-parse HEAD | cut -b1-8)
-else
-	# In CI
-	ifneq ($(RELEASE_VERSION),)
-		VERSION := $(RELEASE_VERSION)
-	else
-		# No tag, so make one
-		VERSION := $(shell git describe --tags 2>/dev/null)
-	endif
-	VERSION_HASH := $(shell echo "$(GITHUB_SHA)" | cut -b1-8)
-endif
+GO_FLAGS := -v
 
-GO_FLAGS := -ldflags "-X main.Version=$(VERSION) -X main.VersionHash=$(VERSION_HASH)"
+ifneq ($(RELEASE_VERSION),)
+	GO_FLAGS += -ldflags "-X main.Version=$(RELEASE_VERSION)"
+endif
 
 .PHONY: all
 default: deps build test lint
@@ -59,7 +47,7 @@ release-windows-latest:
 
 .PHONY: build
 build: ## install the binary in GOPATH/bin
-	@env GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bin/${REPO_NAME} ./cmd/${REPO_NAME}
+	@env CGO_ENABLED=1 go build -v -o bin/${REPO_NAME} $(GO_FLAGS) ./cmd/${REPO_NAME}
 
 .PHONY: lint
 lint:

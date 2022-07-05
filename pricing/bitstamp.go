@@ -26,49 +26,43 @@ type bitstampResponse struct {
 
 var _ fetchPriceFunc = getPriceBitStamp
 
-func getPriceBitStamp(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, client *http.Client, req *http.Request) (priceinfo PriceInfo, err error) {
-	var resp *http.Response
-	resp, err = client.Do(req)
+func getPriceBitStamp(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, client *http.Client, req *http.Request) (PriceInfo, error) {
+	resp, err := client.Do(req)
 	if err != nil {
-		err = errors.Wrap(err, "failed to perform HTTP request")
-		return priceinfo, err
+		return PriceInfo{}, errors.Wrap(err, "failed to perform HTTP request")
 	}
 	defer resp.Body.Close()
 
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		err = errors.Wrap(err, "failed to read HTTP response body")
-		return priceinfo, err
+		return PriceInfo{}, errors.Wrap(err, "failed to read HTTP response body")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("bitstamp returned HTTP %d (%s)", resp.StatusCode, string(content))
-		return priceinfo, err
+		return PriceInfo{}, fmt.Errorf("bitstamp returned HTTP %d (%s)", resp.StatusCode, string(content))
 	}
 
 	var response bitstampResponse
 	if err = json.Unmarshal(content, &response); err != nil {
-		err = errors.Wrap(err, "failed to parse HTTP response as JSON")
-		return priceinfo, err
+		return PriceInfo{}, errors.Wrap(err, "failed to parse HTTP response as JSON")
 	}
 
 	if response.Last == "" {
-		err = errors.New("bitstamp returned an empty Last price")
-		return priceinfo, err
+		return PriceInfo{}, errors.New("bitstamp returned an empty Last price")
 	}
 
 	var p float64
 	p, err = strconv.ParseFloat(response.Last, 64)
 	if err != nil {
-		return priceinfo, err
+		return PriceInfo{}, err
 	}
 	if p <= 0.0 {
-		err = fmt.Errorf("bitstamp returned zero/negative price: %f", p)
-		return priceinfo, err
+		return PriceInfo{}, fmt.Errorf("bitstamp returned zero/negative price: %f", p)
 	}
 	t := time.Now().Round(0)
-	priceinfo.LastUpdatedReal = t
-	priceinfo.LastUpdatedWander = t
-	priceinfo.Price = p * pricecfg.Factor
-	return priceinfo, nil
+	return PriceInfo{
+		LastUpdatedReal:   t,
+		LastUpdatedWander: t,
+		Price:             p * pricecfg.Factor,
+	}, nil
 }

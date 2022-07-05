@@ -45,50 +45,46 @@ type ftxResponse struct {
 
 var _ fetchPriceFunc = getPriceFTX
 
-func getPriceFTX(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, client *http.Client, req *http.Request) (priceinfo PriceInfo, err error) {
-	var resp *http.Response
-	resp, err = client.Do(req)
+func getPriceFTX(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, client *http.Client, req *http.Request) (PriceInfo, error) {
+	resp, err := client.Do(req)
 	if err != nil {
-		return priceinfo, err
+		return PriceInfo{}, err
 	}
 	defer resp.Body.Close()
 
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		err = errors.Wrap(err, "failed to read HTTP response body")
-		return priceinfo, err
+		return PriceInfo{}, errors.Wrap(err, "failed to read HTTP response body")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("ftx.com returned HTTP %d (%s)", resp.StatusCode, string(content))
-		return priceinfo, err
+		return PriceInfo{}, fmt.Errorf("ftx.com returned HTTP %d (%s)", resp.StatusCode, string(content))
 	}
 
 	var response ftxResponse
 	// if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {...}
 	if err = json.Unmarshal(content, &response); err != nil {
-		err = errors.Wrap(err, "failed to parse HTTP response as JSON")
-		return priceinfo, err
+		return PriceInfo{}, errors.Wrap(err, "failed to parse HTTP response as JSON")
 	}
 	if !response.Success {
-		err = fmt.Errorf("ftx.com returned success=false")
-		return priceinfo, err
+		return PriceInfo{}, fmt.Errorf("ftx.com returned success=false")
 	}
 
-	priceinfo.Price = response.Result.Price
-	if priceinfo.Price <= 0.0 {
+	price := response.Result.Price
+
+	if price <= 0.0 {
 		// Sometimes null/zero.
-		priceinfo.Price = response.Result.Last
+		price = response.Result.Last
 	}
 
-	if priceinfo.Price <= 0.0 {
-		err = fmt.Errorf("ftx.com returned zero/negative for Price and Last")
-		return priceinfo, err
+	if price <= 0.0 {
+		return PriceInfo{}, fmt.Errorf("ftx.com returned zero/negative for Price and Last")
 	}
 
 	t := time.Now().Round(0)
-	priceinfo.LastUpdatedReal = t
-	priceinfo.LastUpdatedWander = t
-	priceinfo.Price *= pricecfg.Factor
-	return priceinfo, nil
+	return PriceInfo{
+		LastUpdatedReal:   t,
+		LastUpdatedWander: t,
+		Price:             price * pricecfg.Factor,
+	}, nil
 }

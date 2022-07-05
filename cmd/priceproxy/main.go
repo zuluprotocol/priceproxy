@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -20,14 +21,14 @@ import (
 
 var (
 	// Version is set at build time using: -ldflags "-X main.Version=someversion".
-	Version = "no_version_set"
+	Version = "v0.1.0+dev"
 
-	// VersionHash is set at build time using: -ldflags "-X main.VersionHash=somehash".
-	VersionHash = "no_hash_set"
+	VersionHash = ""
 )
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	setCommitHash()
 
 	var configName string
 	var configVersion bool
@@ -89,4 +90,21 @@ func main() {
 	signal.Notify(c, syscall.SIGTERM)
 	<-c
 	s.Stop()
+}
+
+func setCommitHash() {
+	info, _ := debug.ReadBuildInfo()
+	modified := false
+
+	for _, v := range info.Settings {
+		if v.Key == "vcs.revision" {
+			VersionHash = v.Value[0:10]
+		}
+		if v.Key == "vcs.modified" {
+			modified = true
+		}
+	}
+	if modified {
+		VersionHash += "-modified"
+	}
 }
