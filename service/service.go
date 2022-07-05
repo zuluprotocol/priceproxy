@@ -145,6 +145,8 @@ func (s *Service) initPricingEngine() error {
 		}).Info("Added price")
 	}
 
+	s.pe.StartFetching()
+
 	for _, pricecfg := range s.config.Prices {
 		pi := s.pe.WaitForPrice(*pricecfg)
 		log.WithFields(log.Fields{

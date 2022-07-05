@@ -38,6 +38,8 @@ type Engine interface {
 	GetPrice(pricecfg config.PriceConfig) (PriceInfo, error)
 	GetPrices() map[config.PriceConfig]PriceInfo
 	UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo)
+
+	StartFetching()
 }
 
 type engine struct {
@@ -129,6 +131,8 @@ func (e *engine) AddPrice(pricecfg config.PriceConfig) error {
 		go e.stream(pricecfg, source, nil, headers, getPriceCoinmarketcap)
 	} else if strings.HasPrefix(source.Name, "ftx-") {
 		go e.stream(pricecfg, source, nil, headers, getPriceFTX)
+	} else if source.Name == coingeckoSourceName {
+		coingeckoAddExtraPriceConfig(pricecfg)
 	} else {
 		return fmt.Errorf("no source for %s", source.Name)
 	}
@@ -183,6 +187,12 @@ func (e *engine) UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo) {
 	e.pricesMu.Lock()
 	e.prices[pricecfg] = newPrice
 	e.pricesMu.Unlock()
+}
+
+func (e *engine) StartFetching() {
+	if sourcecfg, ok := e.sources[coingeckoSourceName]; ok {
+		go coingeckoStartFetching(e, sourcecfg)
+	}
 }
 
 func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, u *url.URL, headers map[string][]string, fetchPrice fetchPriceFunc) {
