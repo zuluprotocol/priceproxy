@@ -1,11 +1,18 @@
-# Makefile
+# FILE IS AUTOMATICALLY MANAGED BY github.com/vegaprotocol/terraform//github
 export REPO_NAME := priceproxy
 
-GO_FLAGS := -v
 
+
+GO_FLAGS := -v
 ifneq ($(RELEASE_VERSION),)
 	GO_FLAGS += -ldflags "-X main.Version=$(RELEASE_VERSION)"
 endif
+
+.PHONY: build
+build: ## install the binary in GOPATH/bin
+	@env CGO_ENABLED=1 go build -v -o bin/${REPO_NAME} $(GO_FLAGS) ./cmd/${REPO_NAME}
+
+
 
 .PHONY: all
 default: deps build test lint
@@ -43,11 +50,6 @@ release-macos-latest:
 release-windows-latest:
 	@env GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -v -o build/${REPO_NAME}-amd64.exe $(GO_FLAGS) ./cmd/${REPO_NAME}
 	@cd build && 7z a -tzip ${REPO_NAME}-windows-amd64.zip ${REPO_NAME}-amd64.exe
-
-
-.PHONY: build
-build: ## install the binary in GOPATH/bin
-	@env CGO_ENABLED=1 go build -v -o bin/${REPO_NAME} $(GO_FLAGS) ./cmd/${REPO_NAME}
 
 .PHONY: lint
 lint:
