@@ -22,6 +22,10 @@ coverage:
 	@go test -covermode=count -coverprofile="coverage.txt" ./...
 	@go tool cover -func="coverage.txt"
 
+.PHONY: docker
+docker: ## Build docker image
+	@docker build -t vegaprotocol/${REPO_NAME}:local .
+
 .PHONY: coveragehtml
 coveragehtml: coverage
 	@go tool cover -html=coverage.txt -o coverage.html
