@@ -34,6 +34,7 @@ type PriceResponse struct {
 	Source            string  `json:"source"`
 	Base              string  `json:"base"`
 	Quote             string  `json:"quote"`
+	QuoteReal         string  `json:"quote_real"`
 	Price             float64 `json:"price"`
 	LastUpdatedReal   string  `json:"lastUpdatedReal"`
 	LastUpdatedWander string  `json:"lastUpdatedWander"`
@@ -106,7 +107,7 @@ func (s *Service) Stop() {
 }
 
 func (s *Service) initPricingEngine() error {
-	s.pe = pricing.NewEngine()
+	s.pe = pricing.NewEngine(s.config.Prices)
 	for _, sourcecfg := range s.config.Sources {
 		err := s.pe.AddSource(*sourcecfg)
 		if err != nil {
@@ -126,32 +127,8 @@ func (s *Service) initPricingEngine() error {
 		}).Info("Added source")
 	}
 
-	for _, pricecfg := range s.config.Prices {
-		err := s.pe.AddPrice(*pricecfg)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error":  err.Error(),
-				"source": pricecfg.Source,
-				"base":   pricecfg.Base,
-				"quote":  pricecfg.Quote,
-				"wander": pricecfg.Wander,
-			}).Fatal("Failed to add price")
-		}
-		log.WithFields(log.Fields{
-			"source": pricecfg.Source,
-			"base":   pricecfg.Base,
-			"quote":  pricecfg.Quote,
-			"wander": pricecfg.Wander,
-		}).Info("Added price")
-	}
-
-	s.pe.StartFetching()
-
-	for _, pricecfg := range s.config.Prices {
-		pi := s.pe.WaitForPrice(*pricecfg)
-		log.WithFields(log.Fields{
-			"price": pi.Price,
-		}).Info("Got first price")
+	if err := s.pe.StartFetching(); err != nil {
+		return fmt.Errorf("failed to start fetching: %w", err)
 	}
 
 	return nil
@@ -187,11 +164,18 @@ func (s *Service) PricesGet(w http.ResponseWriter, r *http.Request, ps httproute
 			(base == "" || base == k.Base) &&
 			(quote == "" || quote == k.Quote) &&
 			(wanderPtr == nil || *wanderPtr == k.Wander) {
+
+			quote = k.Quote
+			if k.QuoteOverride != "" {
+				quote = k.QuoteOverride
+			}
+
 			response.Prices = append(response.Prices, &PriceResponse{
 				Source:            k.Source,
 				Base:              k.Base,
-				Quote:             k.Quote,
-				Price:             v.Price,
+				Quote:             quote,
+				QuoteReal:         k.Quote,
+				Price:             v.Price * k.Factor,
 				LastUpdatedReal:   v.LastUpdatedReal.String(),
 				LastUpdatedWander: v.LastUpdatedWander.String(),
 			})

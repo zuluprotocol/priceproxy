@@ -14,18 +14,9 @@ import (
 )
 
 var (
-	coingeckoExtraPairs = []config.PriceConfig{}
 	coingeckoSourceName = "coingecko"
+	supportedQuotes     = []string{"ETH", "EUR", "USD", "BTC", "DAI"}
 )
-
-func coingeckoAddExtraPriceConfig(priceconfig config.PriceConfig) error {
-	coingeckoExtraPairs = append(coingeckoExtraPairs, priceconfig)
-	return nil
-}
-
-type priceBoard interface {
-	UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo)
-}
 
 func coingeckoStartFetching(
 	board priceBoard,
@@ -38,11 +29,13 @@ func coingeckoStartFetching(
 		ctx             = context.Background()
 		err             error
 	)
+
 	log.WithFields(log.Fields{
 		"sourceName":        coingeckoSourceName,
 		"URL":               fetchURL,
 		"rateLimitDuration": oneRequestEvery,
 	}).Infof("Starting Coingecko Fetching\n")
+
 	for {
 		if err = rateLimiter.Wait(ctx); err != nil {
 			log.WithFields(log.Fields{
@@ -66,60 +59,63 @@ func coingeckoStartFetching(
 			continue
 		}
 
-		for base, data := range *prices {
-			board.UpdatePrice(
-				config.PriceConfig{
-					Source: coingeckoSourceName,
-					Base:   base,
-					Quote:  "ETH",
-					Factor: 1.0,
-					Wander: true,
-				},
-				PriceInfo{
-					Price:             data.ETH,
-					LastUpdatedReal:   time.Unix(int64(data.LastUpdatedAt), 0),
-					LastUpdatedWander: time.Now().Round(0),
-				},
-			)
-		}
+		for _, price := range board.PriceList(sourcecfg.Name) {
+			priceUpdated := false
+		CoinGeckoLoop:
+			for coingeckoBase, coingeckoData := range *prices {
+				if price.Base == coingeckoBase {
+					var fetchedPrice float64
 
-		for _, extraPair := range coingeckoExtraPairs {
-			base, ok := (*prices)[extraPair.Base]
-			if !ok {
-				log.WithFields(log.Fields{
-					"sourceName":        coingeckoSourceName,
-					"URL":               fetchURL,
-					"rateLimitDuration": oneRequestEvery,
-				}).Errorf("Failed to get base %s for extra pair %v\n", extraPair.Base, extraPair)
-				continue
-			}
-			var price float64
-			if strings.EqualFold(extraPair.Quote, "EUR") {
-				price = base.EUR
-			} else if strings.EqualFold(extraPair.Quote, "USD") {
-				price = base.USD
-			} else if strings.EqualFold(extraPair.Quote, "BTC") {
-				price = base.BTC
-			} else {
-				quote, ok := (*prices)[extraPair.Quote]
-				if !ok {
-					log.WithFields(log.Fields{
-						"sourceName":        coingeckoSourceName,
-						"URL":               fetchURL,
-						"rateLimitDuration": oneRequestEvery,
-					}).Errorf("Failed to get quote %s for extra pair %v\n", extraPair.Source, extraPair)
-					continue
+					switch strings.ToUpper(price.Quote) {
+					case "ETH":
+						fetchedPrice = coingeckoData.ETH
+					case "BTC":
+						fetchedPrice = coingeckoData.BTC
+					case "USD":
+						fetchedPrice = coingeckoData.USD
+					case "EUR":
+						fetchedPrice = coingeckoData.EUR
+					case "DAI":
+						fetchedPrice = coingeckoData.DAI
+					default:
+						log.WithFields(log.Fields{
+							"sourceName":     coingeckoSourceName,
+							"base":           price.Base,
+							"quote":          price.Quote,
+							"quote_override": price.QuoteOverride,
+						}).Errorf("price quote is invalid, got %s, expecting one of %v", price.Quote, supportedQuotes)
+						break CoinGeckoLoop
+					}
+
+					if fetchedPrice == 0 {
+						log.WithFields(log.Fields{
+							"sourceName":     coingeckoSourceName,
+							"base":           price.Base,
+							"quote":          price.Quote,
+							"quote_override": price.QuoteOverride,
+						}).Warnf("collected price in the quote current is 0, consider selecting different quote and overwrite it with the `quote_override` parameter")
+					}
+
+					board.UpdatePrice(
+						price,
+						PriceInfo{
+							Price:             fetchedPrice,
+							LastUpdatedReal:   time.Unix(int64(coingeckoData.LastUpdatedAt), 0),
+							LastUpdatedWander: time.Now().Round(0),
+						},
+					)
+					priceUpdated = true
 				}
-				price = base.USD / quote.USD
 			}
-			board.UpdatePrice(
-				extraPair,
-				PriceInfo{
-					Price:             price,
-					LastUpdatedReal:   time.Unix(int64(base.LastUpdatedAt), 0),
-					LastUpdatedWander: time.Now().Round(0),
-				},
-			)
+
+			if !priceUpdated {
+				log.WithFields(log.Fields{
+					"sourceName":     coingeckoSourceName,
+					"base":           price.Base,
+					"quote":          price.Quote,
+					"quote_override": price.QuoteOverride,
+				}).Errorf("price not found in the coingecko API")
+			}
 		}
 	}
 }
@@ -129,6 +125,7 @@ type coingeckoFetchData map[string]struct {
 	EUR           float64 `json:"eur"`
 	BTC           float64 `json:"btc"`
 	ETH           float64 `json:"eth"`
+	DAI           float64 `json:"dai"`
 	LastUpdatedAt uint64  `json:"last_updated_at"`
 }
 

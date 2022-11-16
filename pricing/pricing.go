@@ -1,18 +1,13 @@
 package pricing
 
 import (
-	"context"
 	"fmt"
-	"math"
-	"math/rand"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"code.vegaprotocol.io/priceproxy/config"
-	log "github.com/sirupsen/logrus"
 )
 
 const minPrice = 0.00001
@@ -27,36 +22,41 @@ type PriceInfo struct {
 }
 
 // Engine is the source of price information from multiple external/internal/fake sources.
+//
 //go:generate go run github.com/golang/mock/mockgen -destination mocks/engine_mock.go -package mocks code.vegaprotocol.io/priceproxy/pricing Engine
 type Engine interface {
 	AddSource(sourcecfg config.SourceConfig) error
 	GetSource(name string) (config.SourceConfig, error)
 	GetSources() ([]config.SourceConfig, error)
 
-	AddPrice(pricecfg config.PriceConfig) error
-	WaitForPrice(pricecfg config.PriceConfig) PriceInfo
+	PriceList(source string) config.PriceList
 	GetPrice(pricecfg config.PriceConfig) (PriceInfo, error)
 	GetPrices() map[config.PriceConfig]PriceInfo
 	UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo)
 
-	StartFetching()
+	StartFetching() error
+}
+
+type priceBoard interface {
+	PriceList(source string) config.PriceList
+	UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo)
 }
 
 type engine struct {
-	prices   map[config.PriceConfig]PriceInfo
-	pricesMu sync.Mutex
+	priceList config.PriceList
+	prices    map[config.PriceConfig]PriceInfo
+	pricesMu  sync.Mutex
 
 	sources   map[string]config.SourceConfig
 	sourcesMu sync.Mutex
 }
 
-type fetchPriceFunc func(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, client *http.Client, req *http.Request) (PriceInfo, error)
-
 // NewEngine creates a new pricing engine.
-func NewEngine() Engine {
+func NewEngine(prices config.PriceList) Engine {
 	e := engine{
-		prices:  make(map[config.PriceConfig]PriceInfo),
-		sources: make(map[string]config.SourceConfig),
+		priceList: prices,
+		prices:    make(map[config.PriceConfig]PriceInfo),
+		sources:   make(map[string]config.SourceConfig),
 	}
 	return &e
 }
@@ -106,61 +106,6 @@ func (e *engine) GetSources() ([]config.SourceConfig, error) {
 	return response, nil
 }
 
-func (e *engine) AddPrice(pricecfg config.PriceConfig) error {
-	e.pricesMu.Lock()
-	_, found := e.prices[pricecfg]
-	e.pricesMu.Unlock()
-	if found {
-		return fmt.Errorf("price already exists: %s", pricecfg.String())
-	}
-
-	source, err := e.GetSource(pricecfg.Source)
-	if err != nil {
-		return fmt.Errorf("failed to get price source for %s: %w", pricecfg.Source, err)
-	}
-
-	headers := map[string][]string{}
-
-	if source.Name == "bitstamp" {
-		go e.stream(pricecfg, source, nil, headers, getPriceBitStamp)
-	} else if source.Name == "coinmarketcap" {
-		headers, err = headersCoinmarketcap()
-		if err != nil {
-			return fmt.Errorf("failed to create HTTP headers for %s: %w", source.Name, err)
-		}
-		go e.stream(pricecfg, source, nil, headers, getPriceCoinmarketcap)
-	} else if strings.HasPrefix(source.Name, "ftx-") {
-		go e.stream(pricecfg, source, nil, headers, getPriceFTX)
-	} else if source.Name == coingeckoSourceName {
-		coingeckoAddExtraPriceConfig(pricecfg)
-	} else {
-		return fmt.Errorf("no source for %s", source.Name)
-	}
-	return nil
-}
-
-func (e *engine) WaitForPrice(pricecfg config.PriceConfig) PriceInfo {
-	sublog := log.WithFields(log.Fields{
-		"priceConfig": pricecfg.String(),
-	})
-
-	sublog.Debug("Waiting for first price")
-	s := 10 // milliseconds
-	for {
-		pi, err := e.GetPrice(pricecfg)
-		if err != nil {
-			sublog.WithFields(log.Fields{"err": err.Error()}).Debug("Waiting for first price")
-		} else {
-			sublog.WithFields(log.Fields{"price": pi.Price}).Debug("Got first price")
-			if pi.Price > 0.0 {
-				return pi
-			}
-		}
-		time.Sleep(time.Duration(s) * time.Millisecond)
-		s *= 2
-	}
-}
-
 func (e *engine) GetPrice(pricecfg config.PriceConfig) (PriceInfo, error) {
 	e.pricesMu.Lock()
 	defer e.pricesMu.Unlock()
@@ -189,110 +134,25 @@ func (e *engine) UpdatePrice(pricecfg config.PriceConfig, newPrice PriceInfo) {
 	e.pricesMu.Unlock()
 }
 
-func (e *engine) StartFetching() {
-	if sourcecfg, ok := e.sources[coingeckoSourceName]; ok {
-		go coingeckoStartFetching(e, sourcecfg)
-	}
+func (e *engine) PriceList(source string) config.PriceList {
+	return e.priceList.GetBySource(source)
 }
 
-func (e *engine) stream(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, u *url.URL, headers map[string][]string, fetchPrice fetchPriceFunc) {
-	if u == nil {
-		p2 := config.PriceConfig{
-			Base:   pricecfg.Base,
-			Quote:  pricecfg.Quote,
-			Wander: pricecfg.Wander,
+func (e *engine) StartFetching() error {
+	for _, sourceConfig := range e.sources {
+		if sourceConfig.IsCoinGecko() {
+			go coingeckoStartFetching(e, sourceConfig)
+			continue
 		}
-		if strings.HasPrefix(p2.Quote, "XYZ") {
-			// Inject a hidden price config, for competitions.
-			p2.Base = ""
-			p2.Quote = ""
+		if sourceConfig.IsCoinMarketCap() {
+			go coinmarketcapStartFetching(e, sourceConfig)
+			continue
 		}
-		u = urlWithBaseQuote(sourcecfg.URL, p2)
-	}
-	sublog := log.WithFields(log.Fields{
-		"base":       pricecfg.Base,
-		"quote":      pricecfg.Quote,
-		"source":     sourcecfg.Name,
-		"source-url": u.String(),
-	})
 
-	annualisedSleepReal := float64(sourcecfg.SleepReal) / 365.25 / 86400.0
-	kappa := 1.0 / annualisedSleepReal
-
-	client := http.Client{}
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		sublog.WithFields(log.Fields{
-			"error": err.Error(),
-		},
-		).Fatal("Failed to create HTTP request")
-	}
-	for headerName, headerValueList := range headers {
-		for _, headerValue := range headerValueList {
-			req.Header.Add(headerName, headerValue)
-		}
+		return fmt.Errorf("source %s not supported", sourceConfig.String())
 	}
 
-	var rpi, realPriceInfo, priceInfo PriceInfo
-
-	// Get price for the first time
-	for err != nil || realPriceInfo.Price == 0 {
-		realPriceInfo, err = fetchPrice(pricecfg, sourcecfg, &client, req)
-		if err != nil {
-			sublog.WithFields(log.Fields{
-				"error": err.Error(),
-			}).Debug("Failed to fetch real price for the first time")
-		}
-		time.Sleep(time.Duration(sourcecfg.SleepWander) * time.Second)
-	}
-	e.UpdatePrice(pricecfg, realPriceInfo)
-	sublog.WithFields(log.Fields{
-		"realPriceInfo": realPriceInfo.String(),
-	}).Debug("Fetched real price for the first time")
-
-	for {
-		cutoff := time.Now().Round(0).Add(time.Duration(-sourcecfg.SleepReal) * time.Second)
-		if realPriceInfo.LastUpdatedReal.Before(cutoff) {
-			rpi, err = fetchPrice(pricecfg, sourcecfg, &client, req)
-			if err == nil {
-				realPriceInfo = rpi
-				e.UpdatePrice(pricecfg, realPriceInfo)
-				sublog.WithFields(log.Fields{
-					"realPriceInfo": realPriceInfo.String(),
-				}).Debug("Fetched real price")
-			} else {
-				sublog.WithFields(log.Fields{
-					"error": err.Error(),
-				}).Warning("Failed to fetch real price")
-			}
-		}
-
-		if pricecfg.Wander {
-			priceInfo, err = e.GetPrice(pricecfg)
-			if err == nil {
-				// make the price wander
-				sigma := 1.0
-				wander := kappa*(realPriceInfo.Price-priceInfo.Price)*annualisedSleepReal + sigma*priceInfo.Price*math.Sqrt(annualisedSleepReal)*rand.NormFloat64()
-				priceInfo.Price += wander
-				if priceInfo.Price < minPrice {
-					priceInfo.Price = minPrice
-				}
-				priceInfo.LastUpdatedWander = time.Now().Round(0)
-				e.UpdatePrice(pricecfg, priceInfo)
-				sublog.WithFields(log.Fields{
-					"kappa":    kappa,
-					"sigma":    sigma,
-					"wander":   wander,
-					"newPrice": priceInfo.String(),
-				}).Debug("Wandered price")
-			} else {
-				sublog.WithFields(log.Fields{
-					"error": err.Error(),
-				}).Warning("Failed to fetch price")
-			}
-		}
-		time.Sleep(time.Duration(sourcecfg.SleepWander) * time.Second)
-	}
+	return nil
 }
 
 func (pi PriceInfo) String() string {

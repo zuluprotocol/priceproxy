@@ -43,11 +43,11 @@ func TestCheckConfig(t *testing.T) {
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
-	cfg.Prices = []*config.PriceConfig{}
+	cfg.Prices = []config.PriceConfig{}
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
-	cfg.Prices = append(cfg.Prices, &config.PriceConfig{})
+	cfg.Prices = append(cfg.Prices, config.PriceConfig{})
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrInvalidValue.Error()))
 
