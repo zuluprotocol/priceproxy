@@ -133,7 +133,19 @@ func (e *engine) PriceList(source string) config.PriceList {
 	return e.priceList.GetBySource(source)
 }
 
+func (e *engine) initPrices() {
+	for _, price := range e.priceList {
+		e.UpdatePrice(price, PriceInfo{
+			Price:             0.0,
+			LastUpdatedReal:   time.Unix(0, 0),
+			LastUpdatedWander: time.Now(),
+		})
+	}
+}
+
 func (e *engine) StartFetching() error {
+	e.initPrices()
+
 	for _, sourceConfig := range e.sources {
 		if sourceConfig.IsCoinGecko() {
 			go coingeckoStartFetching(e, sourceConfig)

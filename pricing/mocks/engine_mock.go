@@ -5,9 +5,9 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	config "code.vegaprotocol.io/priceproxy/config"
 	pricing "code.vegaprotocol.io/priceproxy/pricing"
+	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
 

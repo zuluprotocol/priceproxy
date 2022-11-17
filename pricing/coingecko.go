@@ -13,9 +13,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-var (
-	supportedQuotes = []string{"ETH", "EUR", "USD", "BTC", "DAI"}
-)
+var supportedQuotes = []string{"ETH", "EUR", "USD", "BTC", "DAI"}
 
 func coingeckoStartFetching(
 	board priceBoard,
