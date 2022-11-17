@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -21,27 +22,43 @@ type ServerConfig struct {
 
 // PriceConfig describes one price setting, which uses one source.
 type PriceConfig struct {
-	Source string  `yaml:"source"`
-	Base   string  `yaml:"base"`
-	Quote  string  `yaml:"quote"`
-	Factor float64 `yaml:"factor"`
-	Wander bool    `yaml:"wander"`
+	Source        string  `yaml:"source"`
+	Base          string  `yaml:"base"`
+	BaseOverride  string  `yaml:"base_override"`
+	Quote         string  `yaml:"quote"`
+	QuoteOverride string  `yaml:"quote_override"`
+	Factor        float64 `yaml:"factor"`
+	Wander        bool    `yaml:"wander"`
 }
 
 // SourceConfig describes one source setting (e.g. one API endpoint).
 // The URL has "{base}" and "{quote}" replaced at runtime with entries from PriceConfig.
 type SourceConfig struct {
-	Name        string  `yaml:"name"`
-	URL         url.URL `yaml:"url"`
-	SleepReal   int     `yaml:"sleepReal"`
-	SleepWander int     `yaml:"sleepWander"`
+	Name           string  `yaml:"name"`
+	URL            url.URL `yaml:"url"`
+	AuthKeyEnvName string  `yaml:"auth_key_env_name"`
+	SleepReal      int     `yaml:"sleepReal"`
 }
+
+type PriceList []PriceConfig
 
 // Config describes the top level config file format.
 type Config struct {
 	Server  *ServerConfig   `yaml:"server"`
-	Prices  []*PriceConfig  `yaml:"prices"`
+	Prices  PriceList       `yaml:"prices"`
 	Sources []*SourceConfig `yaml:"sources"`
+}
+
+func (pl PriceList) GetBySource(source string) PriceList {
+	result := PriceList{}
+
+	for _, price := range pl {
+		if price.Source == source {
+			result = append(result, price)
+		}
+	}
+
+	return result
 }
 
 var (
@@ -73,9 +90,6 @@ func CheckConfig(cfg *Config) error {
 	for _, sourcecfg := range cfg.Sources {
 		if sourcecfg.SleepReal == 0 {
 			return fmt.Errorf("%s: sleepReal", ErrInvalidValue.Error())
-		}
-		if sourcecfg.SleepWander == 0 {
-			return fmt.Errorf("%s: sleepWander", ErrInvalidValue.Error())
 		}
 	}
 
@@ -144,6 +158,18 @@ func (pc PriceConfig) String() string {
 }
 
 func (ps SourceConfig) String() string {
-	return fmt.Sprintf("{SourceConfig Name:%s URL:%s SleepReal:%ds SleepWander:%ds}",
-		ps.Name, ps.URL.String(), ps.SleepReal, ps.SleepWander)
+	return fmt.Sprintf("{SourceConfig Name:%s URL:%s SleepReal:%ds}",
+		ps.Name, ps.URL.String(), ps.SleepReal)
+}
+
+func (ps SourceConfig) IsCoinGecko() bool {
+	return strings.Contains(ps.URL.Host, "coingecko.com")
+}
+
+func (ps SourceConfig) IsCoinMarketCap() bool {
+	return strings.Contains(ps.URL.Host, "coinmarketcap.com")
+}
+
+func (ps SourceConfig) IsBitstamp() bool {
+	return strings.Contains(ps.URL.Host, "bitstamp.net")
 }

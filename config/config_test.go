@@ -37,17 +37,13 @@ func TestCheckConfig(t *testing.T) {
 
 	cfg.Sources[0].SleepReal = 1
 	err = config.CheckConfig(&cfg)
-	assert.True(t, strings.HasPrefix(err.Error(), config.ErrInvalidValue.Error()))
+	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
-	cfg.Sources[0].SleepWander = 1
+	cfg.Prices = []config.PriceConfig{}
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
-	cfg.Prices = []*config.PriceConfig{}
-	err = config.CheckConfig(&cfg)
-	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
-
-	cfg.Prices = append(cfg.Prices, &config.PriceConfig{})
+	cfg.Prices = append(cfg.Prices, config.PriceConfig{})
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrInvalidValue.Error()))
 
@@ -89,8 +85,7 @@ func TestConfigStringFuncs(t *testing.T) {
 			Path:     "/path",
 			RawQuery: "a=b&x=y",
 		},
-		SleepReal:   11,
-		SleepWander: 7,
+		SleepReal: 11,
 	}
-	assert.Equal(t, "{SourceConfig Name:NNN URL:https://example.com/path?a=b&x=y SleepReal:11s SleepWander:7s}", ps.String())
+	assert.Equal(t, "{SourceConfig Name:NNN URL:https://example.com/path?a=b&x=y SleepReal:11s}", ps.String())
 }

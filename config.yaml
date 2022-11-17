@@ -1,0 +1,242 @@
+server:
+  listen: ":80"
+  logformat: text # json, text
+  loglevel: debug
+  env: prod # dev, prod
+
+sources:
+  - name: bitstamp
+    # Avoid BitStamp, it has a tendency to return HTTP 404 if the UserAgent is not a browser.
+    sleepReal: 60 # seconds
+    url:
+      scheme: https
+      host: www.bitstamp.net
+      path: /api/v2/ticker/
+
+  - name: coinmarketcap
+    sleepReal: 400 # seconds
+    auth_key_env_name: "CMC_PRO_API_KEY" # this env variable must be exported
+    url:
+      scheme: https
+      host: pro-api.coinmarketcap.com
+      path: /v1/cryptocurrency/listings/latest
+
+  - name: coingecko
+    sleepReal: 30 # seconds
+    url:
+      scheme: https
+      host: api.coingecko.com
+      path: /api/v3/simple/price
+      rawquery: ids=solana,ethereum,bitcoin,terra-luna-2,uniswap,dai,aave,aapl,litecoin,optimism,monero,cosmos&vs_currencies=usd,eur,btc,eth&include_last_updated_at=true
+
+  # - name: exchangeratesapi
+  #   sleepReal: 600  # seconds
+  #   sleepWander: 30  # seconds
+  #   url:
+  #     scheme: https
+  #     host: api.exchangeratesapi.io
+  #     path: /latest
+  #     rawquery: base={base}&symbols={quote}
+
+
+prices:
+  # Faked markets not available in our sources
+  - source: coinmarketcap
+    base: AAVE
+    base_override: AAPL
+    quote: USD
+    quote_override: USD
+    factor: 1.2
+    wander: true
+
+  - source: coingecko
+    base: monero
+    base_override: TSLA
+    quote: EUR
+    quote_override: EURO
+    factor: 1.4
+    wander: true
+
+  # Real currencies    
+  - source: coinmarketcap
+    base: BTC
+    quote: USD
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: monero
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: terra-luna-2
+    quote: ETH
+    factor: 1.0
+    wander: true
+  
+  - source: coingecko
+    base: aave
+    quote: dai
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: aave
+    base_override: AAVE
+    quote: dai
+    quote_override: DAI
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: monero
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: bitcoin
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: cosmos
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: terra-luna-2
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: solana
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: cosmos
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: ethereum
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: uniswap
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: optimism
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: litecoin
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: litecoin
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: dai
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: ethereum
+    quote: btc
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: LUNC
+    quote: USD
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: LUNC
+    base_override: LUNA
+    quote: USD
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: XMR
+    quote: USD
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: optimism
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: UNI
+    quote: DAI
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: uniswap
+    quote: dai
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: bitcoin
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: aave
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: ETH
+    quote: BTC
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: ETH
+    quote: DAI
+    factor: 1.0
+    wander: true
+
+  - source: bitstamp
+    base: IMX
+    quote: USD
+    factor: 1.0
+    wander: true
+
+  - source: bitstamp
+    base: IMX
+    quote: ETH
+    factor: 1.0
+    wander: true

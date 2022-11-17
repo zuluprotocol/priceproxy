@@ -13,7 +13,7 @@ See the [releases page](https://github.com/vegaprotocol/priceproxy/releases/).
 Either run `go get`:
 
 ```bash
-go get code.vegaprotocol.io/priceproxy/cmd/priceproxy@latest
+go get github.com/vegaprotocol/priceproxy/cmd/priceproxy@latest
 ```
 
 Or clone the repository:

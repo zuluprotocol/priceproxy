@@ -1,102 +1,210 @@
 package pricing
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"code.vegaprotocol.io/priceproxy/config"
-	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 )
 
-type cmcStatusResponse struct {
-	Timestamp    string `json:"timestamp"`
-	ErrorCode    int    `json:"error_code"`
-	ErrorMessage string `json:"error_message"`
-	Elapsed      int    `json:"elapsed"`
-	CreditCount  int    `json:"credit_count"`
-	Notice       string `json:"notice"`
-}
+func coinmarketcapStartFetching(
+	board priceBoard,
+	sourcecfg config.SourceConfig,
+) {
+	var (
+		fetchURL        = sourcecfg.URL
+		oneRequestEvery = time.Duration(sourcecfg.SleepReal) * time.Second
+		rateLimiter     = rate.NewLimiter(rate.Every(oneRequestEvery), 1)
+		ctx             = context.Background()
+		err             error
+	)
 
-type cmcQuoteResponse struct {
-	Price            float64 `json:"price"`
-	Volume24h        float64 `json:"volume_24h"`
-	PercentChange1h  float64 `json:"percent_change_1h"`
-	PercentChange24h float64 `json:"percent_change_24h"`
-	PercentChange7d  float64 `json:"percent_change_7d"`
-	MarketCap        float64 `json:"market_cap"`
-	LastUpdated      string  `json:"last_updated"`
-}
-
-type cmcDataResponse struct {
-	ID          int                         `json:"id"`
-	Name        string                      `json:"name"`
-	Symbol      string                      `json:"symbol"`
-	Slug        string                      `json:"slug"`
-	IsActive    int                         `json:"is_active"`
-	LastUpdated string                      `json:"last_updated"`
-	Quote       map[string]cmcQuoteResponse `json:"quote"`
-}
-
-type cmcResponse struct {
-	Status cmcStatusResponse          `json:"status"`
-	Data   map[string]cmcDataResponse `json:"data"`
-}
-
-func headersCoinmarketcap() (map[string][]string, error) {
-	headers := make(map[string][]string, 1)
-
-	fn := os.ExpandEnv("$HOME/coinmarketcap-apikey.txt")
-	apiKey, err := ioutil.ReadFile(fn) // #nosec G304
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to read API key file %s", fn))
+	apiKey := ""
+	if sourcecfg.AuthKeyEnvName != "" {
+		apiKey = os.Getenv(sourcecfg.AuthKeyEnvName)
 	}
-	headers["X-CMC_PRO_API_KEY"] = []string{string(apiKey)}
-	return headers, nil
+
+	if apiKey == "" {
+		log.WithFields(log.Fields{
+			"sourceName":     sourcecfg.Name,
+			"URL":            sourcecfg.URL,
+			"AuthKeyEnvName": sourcecfg.AuthKeyEnvName,
+		}).Warnf("The API key is empty. Use the `auth_key_env_name` config for the source and export corresponding environment name")
+	}
+
+	fetchURLQuery := fetchURL.Query()
+	fetchURLQuery.Add("CMC_PRO_API_KEY", apiKey)
+	fetchURL.RawQuery = fetchURLQuery.Encode()
+
+	for {
+		if err = rateLimiter.Wait(ctx); err != nil {
+			log.WithFields(log.Fields{
+				"error":             err.Error(),
+				"sourceName":        sourcecfg.Name,
+				"URL":               sourcecfg.URL.String(),
+				"rateLimitDuration": oneRequestEvery,
+			}).Errorln("Rate Limiter Failed. Falling back to Sleep.")
+			// fallback
+			time.Sleep(oneRequestEvery)
+		}
+
+		coinmarketcapData, err := coinmarketcapSingleFetch(fetchURL.String())
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error":             err.Error(),
+				"sourceName":        sourcecfg.Name,
+				"URL":               sourcecfg.URL.String(),
+				"rateLimitDuration": oneRequestEvery,
+			}).Errorln("failed to get trading data.")
+		}
+
+		for _, price := range board.PriceList(sourcecfg.Name) {
+			fetchedCurrency := coinmarketcapData.GetCurrency(price.Base)
+			if fetchedCurrency == nil {
+				log.WithFields(log.Fields{
+					"sourceName":     sourcecfg.Name,
+					"base":           price.Base,
+					"quote":          price.Quote,
+					"quote_override": price.QuoteOverride,
+				}).Errorln("price not returned from the API")
+				continue
+			}
+
+			fetchedQuote := fetchedCurrency.QuoteByName(price.Quote)
+			fetchedPrice := 0.0
+			fetchedLastUpdate := fetchedCurrency.LastUpdated
+			if fetchedQuote != nil {
+				fetchedPrice = fetchedQuote.Price
+				fetchedLastUpdate = fetchedQuote.LastUpdated
+			}
+
+			parsedTime, err := time.Parse(time.RFC3339, fetchedLastUpdate)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error":             err.Error(),
+					"sourceName":        sourcecfg.Name,
+					"base":              price.Base,
+					"quote":             price.Quote,
+					"quote_override":    price.QuoteOverride,
+					"last_updated_time": fetchedLastUpdate,
+				}).Warnf("cannot parse fetched last_updated time with the ISO8601 format")
+			}
+
+			if fetchedPrice == 0 {
+				log.WithFields(log.Fields{
+					"sourceName":     sourcecfg.Name,
+					"base":           price.Base,
+					"quote":          price.Quote,
+					"quote_override": price.QuoteOverride,
+				}).Debug("Quote/Base rate not found directly, trying conversion")
+
+				fetchedPrice = coinmarketcapData.ConvertPrice(price.Base, price.Quote)
+			}
+
+			if fetchedPrice == 0 {
+				log.WithFields(log.Fields{
+					"sourceName":     sourcecfg.Name,
+					"base":           price.Base,
+					"quote":          price.Quote,
+					"quote_override": price.QuoteOverride,
+				}).Warnf("fetched price in the quote current is 0, consider selecting different quote and overwrite it with the `quote_override` parameter")
+			}
+
+			board.UpdatePrice(
+				price,
+				PriceInfo{
+					Price:             fetchedPrice,
+					LastUpdatedReal:   parsedTime,
+					LastUpdatedWander: time.Now().Round(0),
+				},
+			)
+		}
+	}
 }
 
-func getPriceCoinmarketcap(pricecfg config.PriceConfig, sourcecfg config.SourceConfig, client *http.Client, req *http.Request) (PriceInfo, error) {
-	if strings.HasPrefix(pricecfg.Quote, "XYZ") {
-		// Inject a hidden price config, for competitions.
-		pricecfg.Base = ""
-		pricecfg.Quote = ""
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return PriceInfo{}, errors.Wrap(err, "failed to perform HTTP request")
-	}
-	defer resp.Body.Close()
+type coinmarketcapQuoteData struct {
+	Price       float64 `json:"price"`
+	LastUpdated string  `json:"last_updated"`
+}
 
-	content, err := ioutil.ReadAll(resp.Body)
+type coinmarketcapCurrencyData struct {
+	Name        string `json:"name"`
+	Symbol      string `json:"symbol"`
+	Slug        string `json:"slug"`
+	LastUpdated string `json:"last_updated"`
+
+	Quote map[string]coinmarketcapQuoteData `json:"quote"`
+}
+
+type coinmarketcapFetchData struct {
+	Data []coinmarketcapCurrencyData `json:"data"`
+}
+
+func (data coinmarketcapFetchData) GetCurrency(name string) *coinmarketcapCurrencyData {
+	for _, currencyData := range data.Data {
+		if strings.EqualFold(currencyData.Name, name) || strings.EqualFold(currencyData.Slug, name) || strings.EqualFold(currencyData.Symbol, name) {
+			return &currencyData
+		}
+	}
+
+	return nil
+}
+
+func (currency coinmarketcapCurrencyData) QuoteByName(name string) *coinmarketcapQuoteData {
+	for qName, qData := range currency.Quote {
+		if strings.EqualFold(qName, name) {
+			return &qData
+		}
+	}
+	return nil
+}
+
+func (data coinmarketcapFetchData) ConvertPrice(base, quote string) float64 {
+	baseCurrency := data.GetCurrency(base)
+	quoteCurrency := data.GetCurrency(quote)
+
+	if baseCurrency == nil || quoteCurrency == nil {
+		return 0.0
+	}
+
+	for qName, qData := range baseCurrency.Quote {
+		// try luck with direct conversion
+		if strings.EqualFold(qName, baseCurrency.Name) || strings.EqualFold(qName, baseCurrency.Slug) || strings.EqualFold(qName, baseCurrency.Symbol) {
+			return qData.Price
+		}
+
+		// conversion by common currency(e.g USD)
+		if commonCurrency := quoteCurrency.QuoteByName(qName); commonCurrency != nil {
+			return qData.Price / commonCurrency.Price
+		}
+
+		// todo: search by ConvertPrice(quote, qName), but may create deadlock...
+		// 	    so we have to impleent timeout + error mechanism here
+	}
+
+	return data.ConvertPrice(quote, base)
+}
+
+func coinmarketcapSingleFetch(url string) (*coinmarketcapFetchData, error) {
+	resp, err := http.Get(url) // nolint:noctx
 	if err != nil {
-		return PriceInfo{}, errors.Wrap(err, "failed to read HTTP response body")
+		return nil, fmt.Errorf("failed to get coinmarketcap data, %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return PriceInfo{}, fmt.Errorf("got HTTP %d (%s)", resp.StatusCode, string(content))
+		return nil, fmt.Errorf("failed to get coinmarketcap data: expected status 200, got %d", resp.StatusCode)
 	}
-
-	var response cmcResponse
-	if err = json.Unmarshal(content, &response); err != nil {
-		return PriceInfo{}, errors.Wrap(err, "failed to parse HTTP response as JSON")
+	defer resp.Body.Close()
+	var prices coinmarketcapFetchData
+	if err = json.NewDecoder(resp.Body).Decode(&prices); err != nil {
+		return nil, fmt.Errorf("failed to parse coinmarketcap data, %w", err)
 	}
-
-	data, ok := response.Data[pricecfg.Base]
-	if !ok {
-		return PriceInfo{}, fmt.Errorf("failed to find Base in response: %s", pricecfg.Base)
-	}
-	quote, ok := data.Quote[pricecfg.Quote]
-	if !ok {
-		return PriceInfo{}, fmt.Errorf("failed to find Quote in response: %s", pricecfg.Quote)
-	}
-	t := time.Now().Round(0)
-	return PriceInfo{
-		LastUpdatedReal:   t,
-		LastUpdatedWander: t,
-		Price:             quote.Price * pricecfg.Factor,
-	}, nil
+	return &prices, nil
 }
