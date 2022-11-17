@@ -3,8 +3,8 @@ package pricing
 import (
 	"time"
 
+	"code.vegaprotocol.io/priceproxy/config"
 	log "github.com/sirupsen/logrus"
-	"github.com/vegaprotocol/priceproxy/config"
 )
 
 func httpStartFetching(

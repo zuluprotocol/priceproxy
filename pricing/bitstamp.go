@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"code.vegaprotocol.io/priceproxy/config"
 	log "github.com/sirupsen/logrus"
-	"github.com/vegaprotocol/priceproxy/config"
 	"golang.org/x/time/rate"
 )
 

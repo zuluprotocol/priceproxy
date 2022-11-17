@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/vegaprotocol/priceproxy/config"
+	"code.vegaprotocol.io/priceproxy/config"
 )
 
 func TestCheckConfig(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vegaprotocol/priceproxy/config"
-	"github.com/vegaprotocol/priceproxy/pricing"
+	"code.vegaprotocol.io/priceproxy/config"
+	"code.vegaprotocol.io/priceproxy/pricing"
 
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"

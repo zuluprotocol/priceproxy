@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vegaprotocol/priceproxy/config"
+	"code.vegaprotocol.io/priceproxy/config"
 )
 
 // PriceInfo describes a price from a source.
@@ -19,7 +19,7 @@ type PriceInfo struct {
 
 // Engine is the source of price information from multiple external/internal/fake sources.
 //
-//go:generate go run github.com/golang/mock/mockgen -destination mocks/engine_mock.go -package mocks github.com/vegaprotocol/priceproxy/pricing Engine
+//go:generate go run github.com/golang/mock/mockgen -destination mocks/engine_mock.go -package mocks code.vegaprotocol.io/priceproxy/pricing Engine
 type Engine interface {
 	AddSource(sourcecfg config.SourceConfig) error
 	GetSource(name string) (config.SourceConfig, error)
