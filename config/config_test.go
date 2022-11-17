@@ -37,9 +37,6 @@ func TestCheckConfig(t *testing.T) {
 
 	cfg.Sources[0].SleepReal = 1
 	err = config.CheckConfig(&cfg)
-	assert.True(t, strings.HasPrefix(err.Error(), config.ErrInvalidValue.Error()))
-
-	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
 	cfg.Prices = []config.PriceConfig{}
@@ -90,5 +87,5 @@ func TestConfigStringFuncs(t *testing.T) {
 		},
 		SleepReal: 11,
 	}
-	assert.Equal(t, "{SourceConfig Name:NNN URL:https://example.com/path?a=b&x=y SleepReal:11s SleepWander:7s}", ps.String())
+	assert.Equal(t, "{SourceConfig Name:NNN URL:https://example.com/path?a=b&x=y SleepReal:11s}", ps.String())
 }
