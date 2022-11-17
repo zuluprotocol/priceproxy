@@ -33,7 +33,7 @@ func coinmarketcapStartFetching(
 
 	if apiKey == "" {
 		log.WithFields(log.Fields{
-			"sourceName":     coingeckoSourceName,
+			"sourceName":     sourcecfg.Name,
 			"URL":            sourcecfg.URL,
 			"AuthKeyEnvName": sourcecfg.AuthKeyEnvName,
 		}).Warnf("The API key is empty. Use the `auth_key_env_name` config for the source and export corresponding environment name")
@@ -69,7 +69,7 @@ func coinmarketcapStartFetching(
 			fetchedCurrency := coinmarketcapData.GetCurrency(price.Base)
 			if fetchedCurrency == nil {
 				log.WithFields(log.Fields{
-					"sourceName":     coingeckoSourceName,
+					"sourceName":     sourcecfg.Name,
 					"base":           price.Base,
 					"quote":          price.Quote,
 					"quote_override": price.QuoteOverride,
@@ -80,14 +80,7 @@ func coinmarketcapStartFetching(
 			fetchedQuote := fetchedCurrency.QuoteByName(price.Quote)
 			fetchedPrice := 0.0
 			fetchedLastUpdate := fetchedCurrency.LastUpdated
-			if fetchedQuote == nil {
-				log.WithFields(log.Fields{
-					"sourceName":     coingeckoSourceName,
-					"base":           price.Base,
-					"quote":          price.Quote,
-					"quote_override": price.QuoteOverride,
-				}).Warnf("collected price in the quote current is 0, consider selecting different quote and overwrite it with the `quote_override` parameter")
-			} else {
+			if fetchedQuote != nil {
 				fetchedPrice = fetchedQuote.Price
 				fetchedLastUpdate = fetchedQuote.LastUpdated
 			}
@@ -96,7 +89,7 @@ func coinmarketcapStartFetching(
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error":             err.Error(),
-					"sourceName":        coingeckoSourceName,
+					"sourceName":        sourcecfg.Name,
 					"base":              price.Base,
 					"quote":             price.Quote,
 					"quote_override":    price.QuoteOverride,
@@ -106,7 +99,7 @@ func coinmarketcapStartFetching(
 
 			if fetchedPrice == 0 {
 				log.WithFields(log.Fields{
-					"sourceName":     coingeckoSourceName,
+					"sourceName":     sourcecfg.Name,
 					"base":           price.Base,
 					"quote":          price.Quote,
 					"quote_override": price.QuoteOverride,
@@ -117,7 +110,7 @@ func coinmarketcapStartFetching(
 
 			if fetchedPrice == 0 {
 				log.WithFields(log.Fields{
-					"sourceName":     coingeckoSourceName,
+					"sourceName":     sourcecfg.Name,
 					"base":           price.Base,
 					"quote":          price.Quote,
 					"quote_override": price.QuoteOverride,

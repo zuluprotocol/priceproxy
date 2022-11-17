@@ -14,8 +14,7 @@ import (
 )
 
 var (
-	coingeckoSourceName = "coingecko"
-	supportedQuotes     = []string{"ETH", "EUR", "USD", "BTC", "DAI"}
+	supportedQuotes = []string{"ETH", "EUR", "USD", "BTC", "DAI"}
 )
 
 func coingeckoStartFetching(
@@ -31,7 +30,7 @@ func coingeckoStartFetching(
 	)
 
 	log.WithFields(log.Fields{
-		"sourceName":        coingeckoSourceName,
+		"sourceName":        sourcecfg.Name,
 		"URL":               fetchURL,
 		"rateLimitDuration": oneRequestEvery,
 	}).Infof("Starting Coingecko Fetching\n")
@@ -40,7 +39,7 @@ func coingeckoStartFetching(
 		if err = rateLimiter.Wait(ctx); err != nil {
 			log.WithFields(log.Fields{
 				"error":             err.Error(),
-				"sourceName":        coingeckoSourceName,
+				"sourceName":        sourcecfg.Name,
 				"URL":               fetchURL,
 				"rateLimitDuration": oneRequestEvery,
 			}).Errorln("Rate Limiter Failed. Falling back to Sleep.")
@@ -52,7 +51,7 @@ func coingeckoStartFetching(
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error":             err.Error(),
-				"sourceName":        coingeckoSourceName,
+				"sourceName":        sourcecfg.Name,
 				"URL":               fetchURL,
 				"rateLimitDuration": oneRequestEvery,
 			}).Errorf("Retry in %d sec.\n", oneRequestEvery)
@@ -79,7 +78,7 @@ func coingeckoStartFetching(
 						fetchedPrice = coingeckoData.DAI
 					default:
 						log.WithFields(log.Fields{
-							"sourceName":     coingeckoSourceName,
+							"sourceName":     sourcecfg.Name,
 							"base":           price.Base,
 							"quote":          price.Quote,
 							"quote_override": price.QuoteOverride,
@@ -89,7 +88,20 @@ func coingeckoStartFetching(
 
 					if fetchedPrice == 0 {
 						log.WithFields(log.Fields{
-							"sourceName":     coingeckoSourceName,
+							"sourceName":     sourcecfg.Name,
+							"base":           price.Base,
+							"quote":          price.Quote,
+							"quote_override": price.QuoteOverride,
+						}).Debug("Quote/Base rate not found directly, trying conversion")
+
+						if convertedPrice := prices.Convert(price.Base, price.Quote); convertedPrice > 0 {
+							fetchedPrice = convertedPrice
+						}
+					}
+
+					if fetchedPrice == 0 {
+						log.WithFields(log.Fields{
+							"sourceName":     sourcecfg.Name,
 							"base":           price.Base,
 							"quote":          price.Quote,
 							"quote_override": price.QuoteOverride,
@@ -110,7 +122,7 @@ func coingeckoStartFetching(
 
 			if !priceUpdated {
 				log.WithFields(log.Fields{
-					"sourceName":     coingeckoSourceName,
+					"sourceName":     sourcecfg.Name,
 					"base":           price.Base,
 					"quote":          price.Quote,
 					"quote_override": price.QuoteOverride,
@@ -120,13 +132,60 @@ func coingeckoStartFetching(
 	}
 }
 
-type coingeckoFetchData map[string]struct {
+type coingeckoCurrencyData struct {
 	USD           float64 `json:"usd"`
 	EUR           float64 `json:"eur"`
 	BTC           float64 `json:"btc"`
 	ETH           float64 `json:"eth"`
 	DAI           float64 `json:"dai"`
 	LastUpdatedAt uint64  `json:"last_updated_at"`
+}
+
+type coingeckoFetchData map[string]coingeckoCurrencyData
+
+func (fd coingeckoFetchData) Convert(base, quote string) float64 {
+	var baseData *coingeckoCurrencyData
+	var quoteData *coingeckoCurrencyData
+	for name, data := range fd {
+		data := data
+		if strings.EqualFold(base, name) {
+			baseData = &data
+		}
+
+		if strings.EqualFold(quote, name) {
+			quoteData = &data
+		}
+
+		if baseData != nil && quoteData != nil {
+			break
+		}
+	}
+
+	if baseData == nil || quoteData == nil {
+		return 0.0
+	}
+
+	if baseData.USD > 0 && quoteData.USD > 0 {
+		return baseData.USD / quoteData.USD
+	}
+
+	if baseData.EUR > 0 && quoteData.EUR > 0 {
+		return baseData.EUR / quoteData.EUR
+	}
+
+	if baseData.DAI > 0 && quoteData.DAI > 0 {
+		return baseData.DAI / quoteData.DAI
+	}
+
+	if baseData.BTC > 0 && quoteData.BTC > 0 {
+		return baseData.BTC / quoteData.BTC
+	}
+
+	if baseData.ETH > 0 && quoteData.ETH > 0 {
+		return baseData.ETH / quoteData.ETH
+	}
+
+	return 0.0
 }
 
 func coingeckoSingleFetch(url string) (*coingeckoFetchData, error) {

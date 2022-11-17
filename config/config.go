@@ -24,6 +24,7 @@ type ServerConfig struct {
 type PriceConfig struct {
 	Source        string  `yaml:"source"`
 	Base          string  `yaml:"base"`
+	BaseOverride  string  `yaml:"base_override"`
 	Quote         string  `yaml:"quote"`
 	QuoteOverride string  `yaml:"quote_override"`
 	Factor        float64 `yaml:"factor"`

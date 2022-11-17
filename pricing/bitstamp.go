@@ -125,7 +125,7 @@ func (fd bitstampCurrencyData) UnixTimestamp() time.Time {
 }
 
 func (fd bitstampCurrencyData) Price() float64 {
-	price, err := strconv.ParseFloat(fd.Timestamp, 64)
+	price, err := strconv.ParseFloat(fd.Last, 64)
 	if err != nil {
 		return 0.0
 	}

@@ -14,9 +14,8 @@ sources:
       path: /api/v2/ticker/
 
   - name: coinmarketcap
-    # requires API key from $HOME/coinmarketcap-apikey.txt
     sleepReal: 1200 # seconds
-    auth_key_env_name: "CMC_PRO_API_KEY"
+    auth_key_env_name: "CMC_PRO_API_KEY" # this env variable must be exported
     url:
       scheme: https
       host: pro-api.coinmarketcap.com
@@ -28,16 +27,7 @@ sources:
       scheme: https
       host: api.coingecko.com
       path: /api/v3/simple/price
-      rawquery: ids=solana,ethereum,bitcoin,terra-luna-2,uniswap,dai,aave,litecoin,optimism,monero,cosmos&vs_currencies=usd,eur,btc,eth&include_last_updated_at=true
-
-  # - name: ethgasstation
-  #   sleepReal: 1800  # seconds
-  #   sleepWander: 30  # seconds
-  #   # Injected at runtime: url.rawquery="api-key=..."
-  #   url:
-  #     scheme: https
-  #     host: ethgasstation.info
-  #     path: /api/ethgasAPI.json
+      rawquery: ids=solana,ethereum,bitcoin,terra-luna-2,uniswap,dai,aave,aapl,litecoin,optimism,monero,cosmos&vs_currencies=usd,eur,btc,eth&include_last_updated_at=true
 
   # - name: exchangeratesapi
   #   sleepReal: 600  # seconds
@@ -48,53 +38,182 @@ sources:
   #     path: /latest
   #     rawquery: base={base}&symbols={quote}
 
-  # - name: finhub
-  #   sleepReal: 1800  # seconds
-  #   sleepWander: 30  # seconds
-  #   url:
-  #     scheme: https
-  #     host: finnhub.io
-  #     path: /api/v1/quote
-  #     rawquery: "symbol={base}"  # yes, Quote is not mentioned
-
-            # - name: ftx-aapl
-            #   sleepReal: 60 # seconds
-            #   sleepWander: 30 # seconds
-            #   url:
-            #     scheme: https
-            #     host: ftx.com
-            #     # Note: The format is TICKER-MMDD (month + day), keep it up to date
-            #     path: /api/markets/AAPL-1230
-
-            # - name: ftx-aave
-            #   sleepReal: 60 # seconds
-            #   sleepWander: 30 # seconds
-            #   url:
-            #     scheme: https
-            #     host: ftx.com
-            #     path: /api/markets/AAVE-PERP
-
-            # - name: ftx-tsla
-            #   sleepReal: 60 # seconds
-            #   sleepWander: 30 # seconds
-            #   url:
-            #     scheme: https
-            #     host: ftx.com
-            #     # Note: The format is TICKER-MMDD (month + day), keep it up to date
-            #     path: /api/markets/TSLA-1230
-
-            # - name: ftx-uni
-            #   sleepReal: 60 # seconds
-            #   sleepWander: 30 # seconds
-            #   url:
-            #     scheme: https
-            #     host: ftx.com
-            #     path: /api/markets/UNI-PERP
 
 prices:
+  # Faked markets not available in our sources
+  - source: coinmarketcap
+    base: AAVE
+    base_override: AAPL
+    quote: USD
+    quote_override: USD
+    factor: 1.2
+    wander: true
+
+  - source: coingecko
+    base: monero
+    base_override: TSLA
+    quote: EUR
+    quote_override: EURO
+    factor: 1.4
+    wander: true
+
+  # Real currencies    
   - source: coinmarketcap
     base: BTC
     quote: USD
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: monero
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: terra-luna-2
+    quote: ETH
+    factor: 1.0
+    wander: true
+  
+  - source: coingecko
+    base: aave
+    quote: dai
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: aave
+    base_override: AAVE
+    quote: dai
+    quote_override: DAI
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: monero
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: bitcoin
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: cosmos
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: terra-luna-2
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: solana
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: cosmos
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: ethereum
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: uniswap
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: optimism
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: litecoin
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: litecoin
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: dai
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: ethereum
+    quote: btc
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: LUNC
+    quote: USD
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: LUNC
+    base_override: LUNA
+    quote: USD
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: XMR
+    quote: USD
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: optimism
+    quote: ETH
+    factor: 1.0
+    wander: true
+
+  - source: coinmarketcap
+    base: UNI
+    quote: DAI
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: uniswap
+    quote: dai
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: bitcoin
+    quote: usd
+    factor: 1.0
+    wander: true
+
+  - source: coingecko
+    base: aave
+    quote: ETH
     factor: 1.0
     wander: true
 
@@ -110,97 +229,6 @@ prices:
     factor: 1.0
     wander: true
 
-  - source: coinmarketcap
-    base: LUNA
-    quote: USD
-    factor: 1.0
-    wander: true
-
-  - source: coinmarketcap
-    base: XMR
-    quote: USD
-    factor: 1.0
-    wander: true
-
-              # - source: ftx-aave
-              #   base: AAVE
-              #   quote: DAI
-              #   factor: 1.0
-              #   wander: true
-
-              # - source: ftx-uni
-              #   base: UNI
-              #   quote: DAI
-              #   factor: 1.0
-              #   wander: true
-
-              # - source: ftx-aapl
-              #   base: AAPL
-              #   quote: USD
-              #   factor: 1.0
-              #   wander: true
-
-              # - source: ftx-tsla
-              #   base: TSLA
-              #   quote: EURO
-              #   factor: 0.951 # USD -> EURO
-              #   wander: true
-
-  - source: coingecko
-    base: aave
-    quote: dai
-    factor: 1.0
-    wander: true
-
-  - source: coingecko
-    base: uniswap
-    quote: dai
-    factor: 1.0
-    wander: true
-
-  - source: coingecko
-    base: terra-luna-2
-    quote: usd
-    factor: 1.0
-    wander: true
-
-  - source: coingecko
-    base: litecoin
-    quote: usd
-    factor: 1.0
-    wander: true
-
-  - source: coingecko
-    base: ethereum
-    quote: btc
-    factor: 1.0
-    wander: true
-
-  - source: coingecko
-    base: bitcoin
-    quote: usd
-    factor: 1.0
-    wander: true
-
-  - source: coingecko
-    base: monero
-    quote: usd
-    factor: 1.0
-    wander: true
-
-  - source: coingecko
-    base: cosmos
-    quote: usd
-    factor: 1.0
-    wander: true
-
-  - source: coingecko
-    base: optimism
-    quote: usd
-    factor: 1.0
-    wander: true
-
-  
   - source: bitstamp
     base: IMX
     quote: USD
@@ -210,12 +238,5 @@ prices:
   - source: bitstamp
     base: IMX
     quote: ETH
-    factor: 1.0
-    wander: true
-
-  
-  - source: bitstamp
-    base: IMX
-    quote: BTC
     factor: 1.0
     wander: true

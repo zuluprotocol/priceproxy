@@ -33,6 +33,7 @@ type Service struct {
 type PriceResponse struct {
 	Source            string  `json:"source"`
 	Base              string  `json:"base"`
+	BaseReal          string  `json:"base_real"`
 	Quote             string  `json:"quote"`
 	QuoteReal         string  `json:"quote_real"`
 	Price             float64 `json:"price"`
@@ -169,10 +170,15 @@ func (s *Service) PricesGet(w http.ResponseWriter, r *http.Request, ps httproute
 			if k.QuoteOverride != "" {
 				returnedQuote = k.QuoteOverride
 			}
+			returnedBase := k.Base
+			if k.BaseOverride != "" {
+				returnedBase = k.BaseOverride
+			}
 
 			response.Prices = append(response.Prices, &PriceResponse{
 				Source:            k.Source,
-				Base:              k.Base,
+				Base:              returnedBase,
+				BaseReal:          k.Base,
 				Quote:             returnedQuote,
 				QuoteReal:         k.Quote,
 				Price:             v.Price * k.Factor,
