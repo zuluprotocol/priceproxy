@@ -15,8 +15,8 @@ import (
 	"github.com/jinzhu/configor"
 	log "github.com/sirupsen/logrus"
 
-	"code.vegaprotocol.io/priceproxy/config"
-	"code.vegaprotocol.io/priceproxy/service"
+	"github.com/vegaprotocol/priceproxy/config"
+	"github.com/vegaprotocol/priceproxy/service"
 )
 
 var (

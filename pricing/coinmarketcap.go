@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"code.vegaprotocol.io/priceproxy/config"
 	log "github.com/sirupsen/logrus"
+	"github.com/vegaprotocol/priceproxy/config"
 	"golang.org/x/time/rate"
 )
 
@@ -121,7 +121,7 @@ func coinmarketcapStartFetching(
 					"base":           price.Base,
 					"quote":          price.Quote,
 					"quote_override": price.QuoteOverride,
-				}).Warnf("collected price in the quote current is 0, consider selecting different quote and overwrite it with the `quote_override` parameter")
+				}).Warnf("fetched price in the quote current is 0, consider selecting different quote and overwrite it with the `quote_override` parameter")
 			}
 
 			board.UpdatePrice(

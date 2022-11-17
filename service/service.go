@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"code.vegaprotocol.io/priceproxy/config"
-	"code.vegaprotocol.io/priceproxy/pricing"
+	"github.com/vegaprotocol/priceproxy/config"
+	"github.com/vegaprotocol/priceproxy/pricing"
 
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
@@ -112,18 +112,16 @@ func (s *Service) initPricingEngine() error {
 		err := s.pe.AddSource(*sourcecfg)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"error":       err.Error(),
-				"name":        sourcecfg.Name,
-				"sleepReal":   sourcecfg.SleepReal,
-				"sleepWander": sourcecfg.SleepWander,
-				"url":         sourcecfg.URL.String(),
+				"error":     err.Error(),
+				"name":      sourcecfg.Name,
+				"sleepReal": sourcecfg.SleepReal,
+				"url":       sourcecfg.URL.String(),
 			}).Fatal("Failed to add source")
 		}
 		log.WithFields(log.Fields{
-			"name":        sourcecfg.Name,
-			"sleepReal":   sourcecfg.SleepReal,
-			"sleepWander": sourcecfg.SleepWander,
-			"url":         sourcecfg.URL.String(),
+			"name":      sourcecfg.Name,
+			"sleepReal": sourcecfg.SleepReal,
+			"url":       sourcecfg.URL.String(),
 		}).Info("Added source")
 	}
 
@@ -159,26 +157,29 @@ func (s *Service) PricesGet(w http.ResponseWriter, r *http.Request, ps httproute
 	response := PricesResponse{
 		Prices: make([]*PriceResponse, 0),
 	}
+
 	for k, v := range s.pe.GetPrices() {
 		if (source == "" || source == k.Source) &&
 			(base == "" || base == k.Base) &&
 			(quote == "" || quote == k.Quote) &&
 			(wanderPtr == nil || *wanderPtr == k.Wander) {
 
-			quote = k.Quote
+			returnedQuote := k.Quote
 			if k.QuoteOverride != "" {
-				quote = k.QuoteOverride
+				returnedQuote = k.QuoteOverride
 			}
 
 			response.Prices = append(response.Prices, &PriceResponse{
 				Source:            k.Source,
 				Base:              k.Base,
-				Quote:             quote,
+				Quote:             returnedQuote,
 				QuoteReal:         k.Quote,
 				Price:             v.Price * k.Factor,
 				LastUpdatedReal:   v.LastUpdatedReal.String(),
 				LastUpdatedWander: v.LastUpdatedWander.String(),
 			})
+		} else {
+			fmt.Printf("%v", k)
 		}
 	}
 	writeSuccess(w, response, http.StatusOK)

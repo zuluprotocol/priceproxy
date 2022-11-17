@@ -2,12 +2,10 @@ package pricing
 
 import (
 	"fmt"
-	"net/url"
-	"strings"
 	"sync"
 	"time"
 
-	"code.vegaprotocol.io/priceproxy/config"
+	"github.com/vegaprotocol/priceproxy/config"
 )
 
 const minPrice = 0.00001
@@ -23,7 +21,7 @@ type PriceInfo struct {
 
 // Engine is the source of price information from multiple external/internal/fake sources.
 //
-//go:generate go run github.com/golang/mock/mockgen -destination mocks/engine_mock.go -package mocks code.vegaprotocol.io/priceproxy/pricing Engine
+//go:generate go run github.com/golang/mock/mockgen -destination mocks/engine_mock.go -package mocks github.com/vegaprotocol/priceproxy/pricing Engine
 type Engine interface {
 	AddSource(sourcecfg config.SourceConfig) error
 	GetSource(name string) (config.SourceConfig, error)
@@ -45,7 +43,7 @@ type priceBoard interface {
 type engine struct {
 	priceList config.PriceList
 	prices    map[config.PriceConfig]PriceInfo
-	pricesMu  sync.Mutex
+	pricesMu  sync.RWMutex
 
 	sources   map[string]config.SourceConfig
 	sourcesMu sync.Mutex
@@ -64,9 +62,6 @@ func NewEngine(prices config.PriceList) Engine {
 func (e *engine) AddSource(sourcecfg config.SourceConfig) error {
 	if sourcecfg.SleepReal == 0 {
 		return fmt.Errorf("invalid source config: sleepReal is zero")
-	}
-	if sourcecfg.SleepWander == 0 {
-		return fmt.Errorf("invalid source config: sleepWander is zero")
 	}
 
 	e.sourcesMu.Lock()
@@ -107,8 +102,8 @@ func (e *engine) GetSources() ([]config.SourceConfig, error) {
 }
 
 func (e *engine) GetPrice(pricecfg config.PriceConfig) (PriceInfo, error) {
-	e.pricesMu.Lock()
-	defer e.pricesMu.Unlock()
+	e.pricesMu.RLock()
+	defer e.pricesMu.RUnlock()
 
 	pi, found := e.prices[pricecfg]
 	if !found {
@@ -118,8 +113,8 @@ func (e *engine) GetPrice(pricecfg config.PriceConfig) (PriceInfo, error) {
 }
 
 func (e *engine) GetPrices() map[config.PriceConfig]PriceInfo {
-	e.pricesMu.Lock()
-	defer e.pricesMu.Unlock()
+	e.pricesMu.RLock()
+	defer e.pricesMu.RUnlock()
 	results := map[config.PriceConfig]PriceInfo{}
 
 	for k, v := range e.prices {
@@ -148,8 +143,12 @@ func (e *engine) StartFetching() error {
 			go coinmarketcapStartFetching(e, sourceConfig)
 			continue
 		}
+		if sourceConfig.IsBitstamp() {
+			go bitstampStartFetching(e, sourceConfig)
+			continue
+		}
 
-		return fmt.Errorf("source %s not supported", sourceConfig.String())
+		go httpStartFetching(e, sourceConfig)
 	}
 
 	return nil
@@ -158,13 +157,4 @@ func (e *engine) StartFetching() error {
 func (pi PriceInfo) String() string {
 	return fmt.Sprintf("{PriceInfo Price:%f LastUpdatedReal:%s LastUpdatedWander:%s}",
 		pi.Price, pi.LastUpdatedReal.String(), pi.LastUpdatedWander.String())
-}
-
-func urlWithBaseQuote(u url.URL, pricecfg config.PriceConfig) *url.URL {
-	result := u
-	result.Path = strings.Replace(result.Path, "{base}", pricecfg.Base, 1)
-	result.Path = strings.Replace(result.Path, "{quote}", pricecfg.Quote, 1)
-	result.RawQuery = strings.Replace(result.RawQuery, "{base}", pricecfg.Base, 1)
-	result.RawQuery = strings.Replace(result.RawQuery, "{quote}", pricecfg.Quote, 1)
-	return &result
 }

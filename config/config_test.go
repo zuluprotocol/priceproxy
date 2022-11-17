@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"code.vegaprotocol.io/priceproxy/config"
+	"github.com/vegaprotocol/priceproxy/config"
 )
 
 func TestCheckConfig(t *testing.T) {
@@ -39,7 +39,6 @@ func TestCheckConfig(t *testing.T) {
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrInvalidValue.Error()))
 
-	cfg.Sources[0].SleepWander = 1
 	err = config.CheckConfig(&cfg)
 	assert.True(t, strings.HasPrefix(err.Error(), config.ErrMissingEmptyConfigSection.Error()))
 
@@ -89,8 +88,7 @@ func TestConfigStringFuncs(t *testing.T) {
 			Path:     "/path",
 			RawQuery: "a=b&x=y",
 		},
-		SleepReal:   11,
-		SleepWander: 7,
+		SleepReal: 11,
 	}
 	assert.Equal(t, "{SourceConfig Name:NNN URL:https://example.com/path?a=b&x=y SleepReal:11s SleepWander:7s}", ps.String())
 }

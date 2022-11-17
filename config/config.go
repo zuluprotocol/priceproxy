@@ -37,7 +37,6 @@ type SourceConfig struct {
 	URL            url.URL `yaml:"url"`
 	AuthKeyEnvName string  `yaml:"auth_key_env_name"`
 	SleepReal      int     `yaml:"sleepReal"`
-	SleepWander    int     `yaml:"sleepWander"`
 }
 
 type PriceList []PriceConfig
@@ -90,9 +89,6 @@ func CheckConfig(cfg *Config) error {
 	for _, sourcecfg := range cfg.Sources {
 		if sourcecfg.SleepReal == 0 {
 			return fmt.Errorf("%s: sleepReal", ErrInvalidValue.Error())
-		}
-		if sourcecfg.SleepWander == 0 {
-			return fmt.Errorf("%s: sleepWander", ErrInvalidValue.Error())
 		}
 	}
 
@@ -161,8 +157,8 @@ func (pc PriceConfig) String() string {
 }
 
 func (ps SourceConfig) String() string {
-	return fmt.Sprintf("{SourceConfig Name:%s URL:%s SleepReal:%ds SleepWander:%ds}",
-		ps.Name, ps.URL.String(), ps.SleepReal, ps.SleepWander)
+	return fmt.Sprintf("{SourceConfig Name:%s URL:%s SleepReal:%ds}",
+		ps.Name, ps.URL.String(), ps.SleepReal)
 }
 
 func (ps SourceConfig) IsCoinGecko() bool {
@@ -171,4 +167,8 @@ func (ps SourceConfig) IsCoinGecko() bool {
 
 func (ps SourceConfig) IsCoinMarketCap() bool {
 	return strings.Contains(ps.URL.Host, "coinmarketcap.com")
+}
+
+func (ps SourceConfig) IsBitstamp() bool {
+	return strings.Contains(ps.URL.Host, "bitstamp.net")
 }

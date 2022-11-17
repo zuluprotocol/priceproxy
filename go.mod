@@ -1,4 +1,4 @@
-module code.vegaprotocol.io/priceproxy
+module github.com/vegaprotocol/priceproxy
 
 go 1.18
 
