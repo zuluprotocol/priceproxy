@@ -200,7 +200,7 @@ func (data coinmarketcapFetchData) ConvertPrice(base, quote string) float64 {
 }
 
 func coinmarketcapSingleFetch(url string) (*coinmarketcapFetchData, error) {
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) // nolint:noctx
 	if err != nil {
 		return nil, fmt.Errorf("failed to get coinmarketcap data, %w", err)
 	}

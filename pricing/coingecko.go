@@ -130,7 +130,7 @@ type coingeckoFetchData map[string]struct {
 }
 
 func coingeckoSingleFetch(url string) (*coingeckoFetchData, error) {
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) // nolint:noctx
 	if err != nil {
 		return nil, fmt.Errorf("failed to get coingecko data, %w", err)
 	}

@@ -8,8 +8,6 @@ import (
 	"github.com/vegaprotocol/priceproxy/config"
 )
 
-const minPrice = 0.00001
-
 // PriceInfo describes a price from a source.
 // The price may be a real updated from an upstream source, or one that has been wandered.
 // The LastUpdated timstamps indicate when the price was last fetched for real and when (if at all) it was last wandered.
@@ -53,6 +51,8 @@ type engine struct {
 func NewEngine(prices config.PriceList) Engine {
 	e := engine{
 		priceList: prices,
+		pricesMu:  sync.RWMutex{},
+		sourcesMu: sync.Mutex{},
 		prices:    make(map[config.PriceConfig]PriceInfo),
 		sources:   make(map[string]config.SourceConfig),
 	}

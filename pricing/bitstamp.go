@@ -116,7 +116,7 @@ func (fd bitstampCurrencyData) Base() string {
 }
 
 func (fd bitstampCurrencyData) UnixTimestamp() time.Time {
-	timestamp, err := strconv.ParseInt(fd.Timestamp, 10, 0)
+	timestamp, err := strconv.ParseInt(fd.Timestamp, 10, 64)
 	if err != nil {
 		return time.Now()
 	}
@@ -125,7 +125,7 @@ func (fd bitstampCurrencyData) UnixTimestamp() time.Time {
 }
 
 func (fd bitstampCurrencyData) Price() float64 {
-	price, err := strconv.ParseFloat(fd.Timestamp, 0)
+	price, err := strconv.ParseFloat(fd.Timestamp, 64)
 	if err != nil {
 		return 0.0
 	}
@@ -187,7 +187,7 @@ func (fd bitstampFetchData) Convert(base, quote string) *bitstampCurrencyData {
 }
 
 func bitstampSingleFetch(url string) (bitstampFetchData, error) {
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) // nolint:noctx
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bitstamp data, %w", err)
 	}
@@ -204,4 +204,4 @@ func bitstampSingleFetch(url string) (bitstampFetchData, error) {
 	return prices, nil
 }
 
-//https://www.bitstamp.net/api/v2/ticker/
+// https://www.bitstamp.net/api/v2/ticker/

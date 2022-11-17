@@ -50,6 +50,8 @@ func NewService(config config.Config) (*Service, error) {
 	s := &Service{
 		Router: httprouter.New(),
 		config: config,
+		server: nil,
+		pe:     nil,
 	}
 
 	if err := s.initPricingEngine(); err != nil {
@@ -163,7 +165,6 @@ func (s *Service) PricesGet(w http.ResponseWriter, r *http.Request, ps httproute
 			(base == "" || base == k.Base) &&
 			(quote == "" || quote == k.Quote) &&
 			(wanderPtr == nil || *wanderPtr == k.Wander) {
-
 			returnedQuote := k.Quote
 			if k.QuoteOverride != "" {
 				returnedQuote = k.QuoteOverride
@@ -178,8 +179,6 @@ func (s *Service) PricesGet(w http.ResponseWriter, r *http.Request, ps httproute
 				LastUpdatedReal:   v.LastUpdatedReal.String(),
 				LastUpdatedWander: v.LastUpdatedWander.String(),
 			})
-		} else {
-			fmt.Printf("%v", k)
 		}
 	}
 	writeSuccess(w, response, http.StatusOK)
