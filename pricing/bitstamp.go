@@ -30,7 +30,7 @@ func bitstampStartFetching(
 		"sourceName":        sourcecfg.Name,
 		"URL":               fetchURL,
 		"rateLimitDuration": oneRequestEvery,
-	}).Infof("Starting Coingecko Fetching\n")
+	}).Infof("Starting bitstamp Fetching\n")
 
 	for {
 		if err = rateLimiter.Wait(ctx); err != nil {

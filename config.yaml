@@ -14,7 +14,7 @@ sources:
       path: /api/v2/ticker/
 
   - name: coinmarketcap
-    sleepReal: 1200 # seconds
+    sleepReal: 400 # seconds
     auth_key_env_name: "CMC_PRO_API_KEY" # this env variable must be exported
     url:
       scheme: https
