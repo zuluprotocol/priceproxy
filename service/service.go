@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"code.vegaprotocol.io/priceproxy/config"
@@ -163,8 +164,8 @@ func (s *Service) PricesGet(w http.ResponseWriter, r *http.Request, ps httproute
 
 	for k, v := range s.pe.GetPrices() {
 		if (source == "" || source == k.Source) &&
-			(base == "" || base == k.Base) &&
-			(quote == "" || quote == k.Quote) &&
+			(base == "" || strings.EqualFold(base, k.Base) || strings.EqualFold(base, k.BaseOverride)) &&
+			(quote == "" || strings.EqualFold(quote, k.Quote) || strings.EqualFold(quote, k.QuoteOverride)) &&
 			(wanderPtr == nil || *wanderPtr == k.Wander) {
 			returnedQuote := k.Quote
 			if k.QuoteOverride != "" {

@@ -63,6 +63,7 @@ func coinmarketcapStartFetching(
 				"URL":               sourcecfg.URL.String(),
 				"rateLimitDuration": oneRequestEvery,
 			}).Errorln("failed to get trading data.")
+			continue
 		}
 
 		for _, price := range board.PriceList(sourcecfg.Name) {
